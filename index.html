@@ -3,539 +3,879 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Game 3D Liên Quân HTML</title>
+    <title>Game 3D Liên Quân Arena Mobile - Full Code</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
             user-select: none;
-            background-color: #000;
         }
-        #game-canvas {
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050508;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #game-container {
+            position: relative;
             width: 100vw;
             height: 100vh;
+        }
+        #webgl-canvas {
+            width: 100%;
+            height: 100%;
             display: block;
         }
-        /* UI Menu */
-        #menu {
+        /* UI START MENU */
+        #menu-overlay {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(10, 10, 20, 0.95), rgba(0, 0, 0, 0.9));
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            z-index: 10;
+            z-index: 100;
+            color: #ffffff;
+            backdrop-filter: blur(8px);
+        }
+        #menu-title {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #f39c12;
+            text-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
+            margin-bottom: 10px;
+        }
+        #menu-subtitle {
+            font-size: 14px;
+            color: #bdc3c7;
+            margin-bottom: 30px;
         }
         #gold-block-btn {
-            width: 120px;
-            height: 120px;
-            background-color: #ffd700;
-            border: 4px solid #fff;
-            border-radius: 15px;
+            width: 130px;
+            height: 130px;
+            background-color: #f1c40f;
+            border: 4px solid #ffffff;
+            border-radius: 20px;
             cursor: pointer;
-            box-shadow: 0 0 20px #ffd700;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5);
             background-size: cover;
             background-position: center;
-            transition: transform 0.2s;
+            background-repeat: no-repeat;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            position: relative;
         }
         #gold-block-btn:active {
-            transform: scale(0.9);
+            transform: scale(0.92);
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
         }
-        /* UI Game */
-        #hud {
+        #gold-block-btn::after {
+            content: 'BẤM ĐỂ CHƠI';
             position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 12px;
             font-weight: bold;
-            font-size: 16px;
-            text-shadow: 1px 1px 3px black;
-            display: none;
-            z-index: 5;
+            color: #f1c40f;
         }
-        /* Controls */
-        #joystick-container {
+        /* HUD UI */
+        #hud-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+        .stats-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(15, 20, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 18px;
+            color: #ffffff;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+        .hp-bar-bg {
+            width: 180px;
+            height: 12px;
+            background-color: #2c3e50;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 4px 0 8px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .hp-bar-fill-player {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            transition: width 0.2s ease;
+        }
+        .hp-bar-fill-enemy {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            transition: width 0.2s ease;
+        }
+        .score-board {
+            margin-top: 5px;
+            font-size: 13px;
+            color: #f39c12;
+            font-weight: bold;
+        }
+        /* CONTROLS UI */
+        #joystick-area {
             position: absolute;
             bottom: 30px;
             left: 30px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.2);
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.25);
             border-radius: 50%;
+            pointer-events: auto;
             touch-action: none;
-            display: none;
-            z-index: 5;
         }
-        #joystick-knob {
+        #joystick-handle {
             position: absolute;
-            top: 35px;
-            left: 35px;
+            top: 40px;
+            left: 40px;
             width: 50px;
             height: 50px;
-            background: rgba(255, 255, 255, 0.6);
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(200,200,200,0.5) 100%);
             border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
-        #action-buttons {
+        #skills-area {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
-            display: none;
-            gap: 15px;
-            z-index: 5;
+            bottom: 35px;
+            right: 35px;
+            display: flex;
+            gap: 20px;
+            pointer-events: auto;
         }
-        .btn {
-            width: 70px;
-            height: 70px;
+        .action-btn {
+            width: 75px;
+            height: 75px;
             border-radius: 50%;
-            border: 2px solid white;
-            color: white;
+            border: 2px solid #ffffff;
+            color: #ffffff;
             font-weight: bold;
+            font-size: 13px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 14px;
-            touch-action: manipulation;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             cursor: pointer;
+            touch-action: manipulation;
         }
-        #btn-attack { background: rgba(220, 53, 69, 0.8); }
-        #btn-skill { background: rgba(40, 167, 69, 0.8); }
-        .cooldown { opacity: 0.5; pointer-events: none; }
+        #btn-attack-ctrl {
+            background: radial-gradient(circle, #e74c3c 0%, #c0392b 100%);
+        }
+        #btn-skill-ctrl {
+            background: radial-gradient(circle, #2ecc71 0%, #27ae60 100%);
+        }
+        .btn-disabled {
+            opacity: 0.45;
+            filter: grayscale(100%);
+            pointer-events: none;
+        }
+        #debug-log {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
     </style>
-    <!-- Three.js Library -->
+    <!-- THREE.JS ENGINE -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-    <!-- Menu Screen -->
-    <div id="menu">
-        <h1>GAME MOBA 3D</h1>
-        <p>Bấm vào khối vàng để bắt đầu</p>
-        <div id="gold-block-btn"></div>
-    </div>
+    <div id="game-container">
+        <!-- CANVAS -->
+        <canvas id="webgl-canvas"></canvas>
 
-    <!-- HUD Game -->
-    <div id="hud">
-        <div id="player-hp">Máu Tướng (Xanh): 100/100</div>
-        <div id="enemy-hp">Máu Địch (Đỏ): 100/100</div>
-        <div id="score">Mạng Địch Chết: 0/5 | Mạng Mình Chết: 0/5</div>
-    </div>
+        <!-- MENU OVERLAY -->
+        <div id="menu-overlay">
+            <div id="menu-title">LIÊN QUÂN 3D ARENA</div>
+            <div id="menu-subtitle">Chọn vào khối vàng để vào trận đấu</div>
+            <div id="gold-block-btn"></div>
+        </div>
 
-    <!-- Controls UI -->
-    <div id="joystick-container">
-        <div id="joystick-knob"></div>
-    </div>
-    <div id="action-buttons">
-        <div id="btn-skill" class="btn">CHIÊU (R)</div>
-        <div id="btn-attack" class="btn">ĐÁNH</div>
+        <!-- HUD GAME -->
+        <div id="hud-container">
+            <div class="stats-panel">
+                <div>Máu Tướng (Bijan): <span id="txt-player-hp">100</span>/100</div>
+                <div class="hp-bar-bg"><div id="hp-player-bar" class="hp-bar-fill-player"></div></div>
+                <div>Máu Địch (Preyta): <span id="txt-enemy-hp">100</span>/100</div>
+                <div class="hp-bar-bg"><div id="hp-enemy-bar" class="hp-bar-fill-enemy"></div></div>
+                <div class="score-board">
+                    Tỉ Số Kills: <span id="txt-kills">0</span>/5 | Chết: <span id="txt-deaths">0</span>/5
+                </div>
+            </div>
+
+            <!-- JOYSTICK -->
+            <div id="joystick-area">
+                <div id="joystick-handle"></div>
+            </div>
+
+            <!-- SKILL BUTTONS -->
+            <div id="skills-area">
+                <div id="btn-skill-ctrl" class="action-btn">CHIÊU (R)</div>
+                <div id="btn-attack-ctrl" class="action-btn">ĐÁNH</div>
+            </div>
+        </div>
+
+        <div id="debug-log">Trạng thái Model: Đang sẵn sàng...</div>
     </div>
 
     <script>
-        // Set ảnh cho Menu
-        const goldBtn = document.getElementById('gold-block-btn');
-        const imgTest = new Image();
-        imgTest.src = 'IMG_0511.jpeg';
-        imgTest.onload = () => { goldBtn.style.backgroundImage = "url('IMG_0511.jpeg')"; };
+        /**
+         * GLOBAL GAME CONFIG & STATE MANAGEMENT
+         */
+        const GAME_CONFIG = {
+            mapModelPath: '5v5_game_map.glb',
+            playerModelPath: 'bijan_arena_of_valor.glb',
+            dragonModelPath: 'holy_dragon_arena_of_valor.glb',
+            enemyModelPath: 'preyta_arena_of_valor.glb',
+            slimeModelPath: 'minecraft_slime.glb',
+            menuImgPath: 'IMG_0511.jpeg',
+            basePlayerPos: new THREE.Vector3(0, 0, 42),
+            baseEnemyPos: new THREE.Vector3(0, 0, -42),
+            maxHp: 100,
+            maxDeaths: 5,
+            skillCooldownTime: 5000
+        };
 
-        // Game State Variables
-        let scene, camera, renderer, gltfLoader;
-        let playerGroup, enemyGroup;
-        let playerModel = null, enemyModel = null;
-        let playerHp = 100, enemyHp = 100;
-        let playerDeaths = 0, enemyDeaths = 0;
-        let isSkillActive = false, skillCooldown = false;
-        let dragonModel = null;
-        let minions = [];
-        let enemyProjectiles = [];
+        let sceneManager = {
+            scene: null,
+            camera: null,
+            renderer: null,
+            gltfLoader: null,
+            clock: new THREE.Clock(),
+            mixers: []
+        };
 
-        // Joystick Controls
-        let moveVec = { x: 0, y: 0 };
-        const mainBasePos = new THREE.Vector3(0, 0, 40);
-        const enemyBasePos = new THREE.Vector3(0, 0, -40);
+        let gameEntities = {
+            playerGroup: null,
+            enemyGroup: null,
+            playerMesh: null,
+            enemyMesh: null,
+            dragonMesh: null,
+            minions: [],
+            projectiles: []
+        };
 
-        // Hàm hỗ trợ Tự điều chỉnh kích thước Model GLB để không bị dị dạng hoặc biến mất
-        function normalizeModelSize(model, targetSize) {
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            if (maxDim > 0) {
-                const scale = targetSize / maxDim;
-                model.scale.set(scale, scale, scale);
-            }
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    if (child.material) child.material.needsUpdate = true;
+        let playerState = {
+            hp: 100,
+            deaths: 0,
+            isDriving: false,
+            canUseSkill: true,
+            moveVector: { x: 0, y: 0 },
+            speed: 0.22
+        };
+
+        let enemyState = {
+            hp: 100,
+            deaths: 0,
+            speed: 0.08
+        };
+
+        function setDebugLog(msg) {
+            document.getElementById('debug-log').innerText = msg;
+        }
+
+        // Setup Menu Image (IMG_0511.jpeg)
+        const menuBtn = document.getElementById('gold-block-btn');
+        const imgChecker = new Image();
+        imgChecker.src = GAME_CONFIG.menuImgPath;
+        imgChecker.onload = () => {
+            menuBtn.style.backgroundImage = `url('${GAME_CONFIG.menuImgPath}')`;
+        };
+
+        /**
+         * GLTF SAFE MODEL LOADER SYSTEM
+         */
+        function safeLoadGLTF(filename, targetSize, onSuccess, onErrorFallback) {
+            const pathsToTry = [
+                filename,
+                './' + filename,
+                filename.toLowerCase(),
+                filename.toUpperCase()
+            ];
+
+            let attemptIndex = 0;
+
+            function tryNext() {
+                if (attemptIndex >= pathsToTry.length) {
+                    setDebugLog(`Không nạp được file ${filename}, chuyển sang khối giả lập.`);
+                    if (onErrorFallback) onErrorFallback();
+                    return;
                 }
+
+                const currentPath = pathsToTry[attemptIndex];
+                attemptIndex++;
+
+                sceneManager.gltfLoader.load(
+                    currentPath,
+                    (gltf) => {
+                        const model = gltf.scene;
+                        
+                        // Scale và Căn chỉnh
+                        const box = new THREE.Box3().setFromObject(model);
+                        const size = box.getSize(new THREE.Vector3());
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        if (maxDim > 0) {
+                            const scaleFactor = targetSize / maxDim;
+                            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                        }
+
+                        // Traverse Materials & Shadows
+                        model.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                                if (child.material) {
+                                    child.material.needsUpdate = true;
+                                    child.material.depthWrite = true;
+                                }
+                            }
+                        });
+
+                        // Animation Mixer nếu có
+                        if (gltf.animations && gltf.animations.length > 0) {
+                            const mixer = new THREE.AnimationMixer(model);
+                            const action = mixer.clipAction(gltf.animations[0]);
+                            action.play();
+                            sceneManager.mixers.push(mixer);
+                        }
+
+                        setDebugLog(`Nạp thành công Model: ${filename}`);
+                        if (onSuccess) onSuccess(model);
+                    },
+                    undefined,
+                    (err) => {
+                        tryNext();
+                    }
+                );
+            }
+
+            tryNext();
+        }
+
+        /**
+         * INITIALIZE THREE.JS SYSTEM
+         */
+        function initEngine() {
+            const canvas = document.getElementById('webgl-canvas');
+            sceneManager.scene = new THREE.Scene();
+            sceneManager.scene.background = new THREE.Color(0x71b2c9);
+            sceneManager.scene.fog = new THREE.FogExp2(0x71b2c9, 0.008);
+
+            sceneManager.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            sceneManager.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+            sceneManager.renderer.setSize(window.innerWidth, window.innerHeight);
+            sceneManager.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            sceneManager.renderer.shadowMap.enabled = true;
+            sceneManager.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            sceneManager.renderer.outputEncoding = THREE.sRGBEncoding;
+
+            sceneManager.gltfLoader = new THREE.GLTFLoader();
+
+            // Setup Lighting
+            const ambLight = new THREE.AmbientLight(0xffffff, 1.2);
+            sceneManager.scene.add(ambLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(40, 80, 40);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 250;
+            const d = 60;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            sceneManager.scene.add(dirLight);
+
+            // Container Groups
+            gameEntities.playerGroup = new THREE.Group();
+            gameEntities.enemyGroup = new THREE.Group();
+            sceneManager.scene.add(gameEntities.playerGroup);
+            sceneManager.scene.add(gameEntities.enemyGroup);
+
+            // 1. NẠP MAP (5v5_game_map.glb)
+            safeLoadGLTF(
+                GAME_CONFIG.mapModelPath,
+                110,
+                (model) => {
+                    sceneManager.scene.add(model);
+                },
+                () => {
+                    // Fallback Map mặc định
+                    buildFallbackMap();
+                }
+            );
+
+            // 2. NẠP PLAYER BIJAN (bijan_arena_of_valor.glb)
+            safeLoadGLTF(
+                GAME_CONFIG.playerModelPath,
+                3.2,
+                (model) => {
+                    gameEntities.playerMesh = model;
+                    gameEntities.playerGroup.add(model);
+                    resetPlayerPosition();
+                },
+                () => {
+                    // Fallback khối vàng
+                    const geom = new THREE.BoxGeometry(2, 2, 2);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3 });
+                    gameEntities.playerMesh = new THREE.Mesh(geom, mat);
+                    gameEntities.playerGroup.add(gameEntities.playerMesh);
+                    resetPlayerPosition();
+                }
+            );
+
+            // 3. NẠP ENEMY PREYTA (preyta_arena_of_valor.glb)
+            safeLoadGLTF(
+                GAME_CONFIG.enemyModelPath,
+                3.2,
+                (model) => {
+                    gameEntities.enemyMesh = model;
+                    gameEntities.enemyGroup.add(model);
+                    resetEnemyPosition();
+                },
+                () => {
+                    // Fallback khối đỏ
+                    const geom = new THREE.BoxGeometry(2, 2, 2);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.3 });
+                    gameEntities.enemyMesh = new THREE.Mesh(geom, mat);
+                    gameEntities.enemyGroup.add(gameEntities.enemyMesh);
+                    resetEnemyPosition();
+                }
+            );
+
+            // Spawners & Loops
+            setInterval(enemySkillRoutine, 5000);
+            setInterval(spawnMinionWave, 15000);
+            spawnMinionWave();
+
+            setupControlsUI();
+            window.addEventListener('resize', onWindowResize);
+
+            // Run Loop
+            renderLoop();
+        }
+
+        /**
+         * FALLBACK MAP CREATOR WITH 3 LANES & TURRETS
+         */
+        function buildFallbackMap() {
+            const groundGeom = new THREE.BoxGeometry(120, 1, 120);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.8 });
+            const ground = new THREE.Mesh(groundGeom, groundMat);
+            ground.position.y = -0.5;
+            ground.receiveShadow = true;
+            sceneManager.scene.add(ground);
+
+            // Lanes & Turrets
+            const laneLanes = [-25, 0, 25];
+            laneLanes.forEach(x => {
+                // Ta (Xanh)
+                const turFriendly = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.2, 1.5, 6, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x2980b9 })
+                );
+                turFriendly.position.set(x, 3, 18);
+                turFriendly.castShadow = true;
+                sceneManager.scene.add(turFriendly);
+
+                // Địch (Đỏ)
+                const turEnemy = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.2, 1.5, 6, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xc0392b })
+                );
+                turEnemy.position.set(x, 3, -18);
+                turEnemy.castShadow = true;
+                sceneManager.scene.add(turEnemy);
             });
         }
 
-        function initGame() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.outputEncoding = THREE.sRGBEncoding;
-            document.body.appendChild(renderer.domElement);
-
-            // Ánh sáng scene
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-            scene.add(ambientLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(30, 60, 30);
-            scene.add(dirLight);
-
-            gltfLoader = new THREE.GLTFLoader();
-
-            // Nhóm Tọa độ cho Tướng
-            playerGroup = new THREE.Group();
-            enemyGroup = new THREE.Group();
-            scene.add(playerGroup);
-            scene.add(enemyGroup);
-
-            // 1. Load Map (5v5_game_map.glb)
-            gltfLoader.load('5v5_game_map.glb', (gltf) => {
-                const map = gltf.scene;
-                normalizeModelSize(map, 120);
-                scene.add(map);
-            }, undefined, (err) => {
-                console.warn("Không load được 5v5_game_map.glb, dùng map mặc định:", err);
-                const ground = new THREE.Mesh(new THREE.BoxGeometry(100, 1, 100), new THREE.MeshLambertMaterial({ color: 0x3b7a57 }));
-                ground.position.y = -0.5;
-                scene.add(ground);
-                createTurrets();
-            });
-
-            // 2. Load Player (bijan_arena_of_valor.glb)
-            gltfLoader.load('bijan_arena_of_valor.glb', (gltf) => {
-                playerModel = gltf.scene;
-                normalizeModelSize(playerModel, 3);
-                playerGroup.add(playerModel);
-                respawnPlayer();
-            }, undefined, (err) => {
-                console.warn("Không load được bijan_arena_of_valor.glb, dùng fallback:", err);
-                playerModel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
-                playerGroup.add(playerModel);
-                respawnPlayer();
-            });
-
-            // 3. Load Enemy (preyta_arena_of_valor.glb)
-            gltfLoader.load('preyta_arena_of_valor.glb', (gltf) => {
-                enemyModel = gltf.scene;
-                normalizeModelSize(enemyModel, 3);
-                enemyGroup.add(enemyModel);
-                respawnEnemy();
-            }, undefined, (err) => {
-                console.warn("Không load được preyta_arena_of_valor.glb, dùng fallback:", err);
-                enemyModel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-                enemyGroup.add(enemyModel);
-                respawnEnemy();
-            });
-
-            // Vòng lặp bắn chiêu và sinh lính
-            setInterval(enemyAttackLogic, 5000); 
-            setInterval(spawnMinions, 15000);    
-            spawnMinions();
-
-            setupControls();
-            animate();
+        function resetPlayerPosition() {
+            gameEntities.playerGroup.position.copy(GAME_CONFIG.basePlayerPos);
+            playerState.hp = 100;
+            updateHUDDisplay();
         }
 
-        function createTurrets() {
-            const paths = [-20, 0, 20];
-            paths.forEach(x => {
-                const tFriendly = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 5), new THREE.MeshLambertMaterial({ color: 0x0000ff }));
-                tFriendly.position.set(x, 2.5, 15);
-                scene.add(tFriendly);
-
-                const tEnemy = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 5), new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-                tEnemy.position.set(x, 2.5, -15);
-                scene.add(tEnemy);
-            });
+        function resetEnemyPosition() {
+            gameEntities.enemyGroup.position.copy(GAME_CONFIG.baseEnemyPos);
+            enemyState.hp = 100;
+            updateHUDDisplay();
         }
 
-        function respawnPlayer() {
-            playerGroup.position.copy(mainBasePos);
-            playerHp = 100;
-            updateHUD();
-        }
-
-        function respawnEnemy() {
-            enemyGroup.position.copy(enemyBasePos);
-            enemyHp = 100;
-            updateHUD();
-        }
-
-        // Spawn Lính 2 phe
-        function spawnMinions() {
+        /**
+         * MINION SPAWN SYSTEM
+         */
+        function spawnMinionWave() {
             for (let i = 0; i < 5; i++) {
-                // Lính Ta (Màu Xanh)
-                const mFriendly = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x00ffff }));
-                mFriendly.position.set(-10 + i * 5, 0.5, 35);
-                mFriendly.userData = { isEnemy: false, hp: 20 };
-                scene.add(mFriendly);
-                minions.push(mFriendly);
+                // Lính Ta
+                const mPlayer = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 1.2, 1.2),
+                    new THREE.MeshStandardMaterial({ color: 0x00ffff })
+                );
+                mPlayer.position.set(-12 + i * 6, 0.6, 36);
+                mPlayer.castShadow = true;
+                mPlayer.userData = { isEnemy: false, hp: 20 };
+                sceneManager.scene.add(mPlayer);
+                gameEntities.minions.push(mPlayer);
 
-                // Lính Địch (Màu Đỏ)
-                const mEnemy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x880000 }));
-                mEnemy.position.set(-10 + i * 5, 0.5, -35);
+                // Lính Địch
+                const mEnemy = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 1.2, 1.2),
+                    new THREE.MeshStandardMaterial({ color: 0x8e44ad })
+                );
+                mEnemy.position.set(-12 + i * 6, 0.6, -36);
+                mEnemy.castShadow = true;
                 mEnemy.userData = { isEnemy: true, hp: 20 };
-                scene.add(mEnemy);
-                minions.push(mEnemy);
+                sceneManager.scene.add(mEnemy);
+                gameEntities.minions.push(mEnemy);
             }
         }
 
-        // Địch Phun Chiêu (minecraft_slime.glb)
-        function enemyAttackLogic() {
-            if (enemyHp <= 0) return;
+        /**
+         * ENEMY ATTACK LOGIC (minecraft_slime.glb)
+         */
+        function enemySkillRoutine() {
+            if (enemyState.hp <= 0) return;
 
-            gltfLoader.load('minecraft_slime.glb', (gltf) => {
-                const slime = gltf.scene;
-                normalizeModelSize(slime, 1.5);
-                createProjectile(slime);
-            }, undefined, (err) => {
-                const proj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x00ff00 }));
-                createProjectile(proj);
-            });
-        }
-
-        function createProjectile(proj) {
-            proj.position.copy(enemyGroup.position);
-            scene.add(proj);
-            const dir = new THREE.Vector3().subVectors(playerGroup.position, enemyGroup.position).normalize();
-            enemyProjectiles.push({ mesh: proj, dir: dir, life: 120 });
-        }
-
-        // Chiêu cưỡi Rồng/Xe Bijan (holy_dragon_arena_of_valor.glb)
-        function activateBijanSkill() {
-            if (skillCooldown || isSkillActive) return;
-            isSkillActive = true;
-            skillCooldown = true;
-
-            const btnSkill = document.getElementById('btn-skill');
-            btnSkill.classList.add('cooldown');
-
-            gltfLoader.load('holy_dragon_arena_of_valor.glb', (gltf) => {
-                dragonModel = gltf.scene;
-                normalizeModelSize(dragonModel, 4);
-                mountDragon();
-            }, undefined, (err) => {
-                dragonModel = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 4), new THREE.MeshLambertMaterial({ color: 0xffff00 }));
-                mountDragon();
-            });
-
-            setTimeout(() => {
-                skillCooldown = false;
-                btnSkill.classList.remove('cooldown');
-            }, 5000);
-        }
-
-        function mountDragon() {
-            playerGroup.add(dragonModel);
-            if (playerModel) playerModel.position.y = 2.0;
-        }
-
-        function dismantleDragon() {
-            if (!isSkillActive) return;
-            isSkillActive = false;
-            if (dragonModel) {
-                playerGroup.remove(dragonModel);
-                dragonModel = null;
-            }
-            if (playerModel) playerModel.position.y = 0;
-        }
-
-        // Đánh thường
-        function performAttack() {
-            if (playerGroup.position.distanceTo(enemyGroup.position) < 4) {
-                enemyHp -= 10;
-                if (enemyHp <= 0) {
-                    enemyDeaths++;
-                    respawnEnemy();
-                    checkGameOver();
+            safeLoadGLTF(
+                GAME_CONFIG.slimeModelPath,
+                1.5,
+                (slimeModel) => {
+                    launchEnemyProjectile(slimeModel);
+                },
+                () => {
+                    const fallbackProj = new THREE.Mesh(
+                        new THREE.BoxGeometry(1, 1, 1),
+                        new THREE.MeshStandardMaterial({ color: 0x2ecc71 })
+                    );
+                    launchEnemyProjectile(fallbackProj);
                 }
-                updateHUD();
+            );
+        }
+
+        function launchEnemyProjectile(projMesh) {
+            projMesh.position.copy(gameEntities.enemyGroup.position);
+            sceneManager.scene.add(projMesh);
+
+            const targetDir = new THREE.Vector3()
+                .subVectors(gameEntities.playerGroup.position, gameEntities.enemyGroup.position)
+                .normalize();
+
+            gameEntities.projectiles.push({
+                mesh: projMesh,
+                direction: targetDir,
+                lifeSpan: 130
+            });
+        }
+
+        /**
+         * PLAYER SKILL SYSTEM (holy_dragon_arena_of_valor.glb)
+         */
+        function triggerBijanSkill() {
+            if (!playerState.canUseSkill || playerState.isDriving) return;
+
+            playerState.isDriving = true;
+            playerState.canUseSkill = false;
+
+            const skillBtn = document.getElementById('btn-skill-ctrl');
+            skillBtn.classList.add('btn-disabled');
+
+            safeLoadGLTF(
+                GAME_CONFIG.dragonModelPath,
+                4.5,
+                (dragonModel) => {
+                    gameEntities.dragonMesh = dragonModel;
+                    mountDragonVehicle();
+                },
+                () => {
+                    const fallbackDragon = new THREE.Mesh(
+                        new THREE.BoxGeometry(3, 1.8, 4.5),
+                        new THREE.MeshStandardMaterial({ color: 0xf1c40f })
+                    );
+                    gameEntities.dragonMesh = fallbackDragon;
+                    mountDragonVehicle();
+                }
+            );
+
+            // Recovery Timer 5s
+            setTimeout(() => {
+                playerState.canUseSkill = true;
+                skillBtn.classList.remove('btn-disabled');
+            }, GAME_CONFIG.skillCooldownTime);
+        }
+
+        function mountDragonVehicle() {
+            gameEntities.playerGroup.add(gameEntities.dragonMesh);
+            if (gameEntities.playerMesh) {
+                gameEntities.playerMesh.position.y = 2.2;
             }
         }
 
-        function checkGameOver() {
-            if (enemyDeaths >= 5) {
-                alert("BẠN ĐÃ THẮNG!");
-                resetGame();
-            } else if (playerDeaths >= 5) {
-                alert("BẠN ĐÃ THUA!");
-                resetGame();
+        function dismountDragonVehicle() {
+            if (!playerState.isDriving) return;
+            playerState.isDriving = false;
+
+            if (gameEntities.dragonMesh) {
+                gameEntities.playerGroup.remove(gameEntities.dragonMesh);
+                gameEntities.dragonMesh = null;
+            }
+            if (gameEntities.playerMesh) {
+                gameEntities.playerMesh.position.y = 0;
             }
         }
 
-        function resetGame() {
-            playerDeaths = 0;
-            enemyDeaths = 0;
-            respawnPlayer();
-            respawnEnemy();
+        /**
+         * MELEE ATTACK
+         */
+        function triggerNormalAttack() {
+            const dist = gameEntities.playerGroup.position.distanceTo(gameEntities.enemyGroup.position);
+            if (dist < 4.5) {
+                enemyState.hp -= 10;
+                if (enemyState.hp <= 0) {
+                    playerState.deaths++;
+                    resetEnemyPosition();
+                    checkMatchCondition();
+                }
+                updateHUDDisplay();
+            }
         }
 
-        function updateHUD() {
-            document.getElementById('player-hp').innerText = `Máu Tướng (Xanh): ${Math.max(0, Math.ceil(playerHp))}/100`;
-            document.getElementById('enemy-hp').innerText = `Máu Địch (Đỏ): ${Math.max(0, Math.ceil(enemyHp))}/100`;
-            document.getElementById('score').innerText = `Mạng Địch Chết: ${enemyDeaths}/5 | Mạng Mình Chết: ${playerDeaths}/5`;
+        function checkMatchCondition() {
+            if (playerState.deaths >= GAME_CONFIG.maxDeaths) {
+                alert("BẠN ĐÃ THẮNG TRẬN ĐẤU!");
+                restartFullMatch();
+            } else if (enemyState.deaths >= GAME_CONFIG.maxDeaths) {
+                alert("BẠN ĐÃ THUA TRẬN ĐẤU!");
+                restartFullMatch();
+            }
         }
 
-        // Joystick Controls & Event
-        function setupControls() {
-            const joystick = document.getElementById('joystick-container');
-            const knob = document.getElementById('joystick-knob');
-            let joystickActive = false;
-            let origin = { x: 0, y: 0 };
+        function restartFullMatch() {
+            playerState.deaths = 0;
+            enemyState.deaths = 0;
+            resetPlayerPosition();
+            resetEnemyPosition();
+        }
 
-            joystick.addEventListener('touchstart', (e) => {
-                joystickActive = true;
-                origin = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        function updateHUDDisplay() {
+            document.getElementById('txt-player-hp').innerText = Math.max(0, Math.ceil(playerState.hp));
+            document.getElementById('txt-enemy-hp').innerText = Math.max(0, Math.ceil(enemyState.hp));
+            document.getElementById('hp-player-bar').style.width = `${Math.max(0, playerState.hp)}%`;
+            document.getElementById('hp-enemy-bar').style.width = `${Math.max(0, enemyState.hp)}%`;
+            document.getElementById('txt-kills').innerText = playerState.deaths;
+            document.getElementById('txt-deaths').innerText = enemyState.deaths;
+        }
+
+        /**
+         * TOUCH & JOYSTICK CONTROLS
+         */
+        function setupControlsUI() {
+            const joyArea = document.getElementById('joystick-area');
+            const joyHandle = document.getElementById('joystick-handle');
+            let isTouching = false;
+            let touchOrigin = { x: 0, y: 0 };
+
+            joyArea.addEventListener('touchstart', (e) => {
+                isTouching = true;
+                touchOrigin = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             });
 
             window.addEventListener('touchmove', (e) => {
-                if (!joystickActive) return;
+                if (!isTouching) return;
                 const touch = e.touches[0];
-                const dx = touch.clientX - origin.x;
-                const dy = touch.clientY - origin.y;
-                const dist = Math.min(Math.hypot(dx, dy), 40);
-                const angle = Math.atan2(dy, dx);
-                
-                knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-                moveVec = { x: Math.cos(angle) * (dist / 40), y: Math.sin(angle) * (dist / 40) };
+                const deltaX = touch.clientX - touchOrigin.x;
+                const deltaY = touch.clientY - touchOrigin.y;
+                const dist = Math.min(Math.hypot(deltaX, deltaY), 45);
+                const angle = Math.atan2(deltaY, deltaX);
+
+                joyHandle.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                playerState.moveVector = { x: Math.cos(angle) * (dist / 45), y: Math.sin(angle) * (dist / 45) };
             });
 
             window.addEventListener('touchend', () => {
-                joystickActive = false;
-                knob.style.transform = 'translate(0px, 0px)';
-                moveVec = { x: 0, y: 0 };
+                isTouching = false;
+                joyHandle.style.transform = 'translate(0px, 0px)';
+                playerState.moveVector = { x: 0, y: 0 };
             });
 
-            document.getElementById('btn-attack').addEventListener('click', performAttack);
-            document.getElementById('btn-skill').addEventListener('click', activateBijanSkill);
+            // Action Buttons
+            document.getElementById('btn-attack-ctrl').addEventListener('click', triggerNormalAttack);
+            document.getElementById('btn-skill-ctrl').addEventListener('click', triggerBijanSkill);
         }
 
-        // Frame Update Loop
-        function animate() {
-            requestAnimationFrame(animate);
+        function onWindowResize() {
+            sceneManager.camera.aspect = window.innerWidth / window.innerHeight;
+            sceneManager.camera.updateProjectionMatrix();
+            sceneManager.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-            const speed = isSkillActive ? 0.4 : 0.2;
+        /**
+         * MAIN GAME LOOP
+         */
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
 
-            // Di chuyển Tướng Ta
-            if (moveVec.x !== 0 || moveVec.y !== 0) {
-                playerGroup.position.x += moveVec.x * speed;
-                playerGroup.position.z += moveVec.y * speed;
-                playerGroup.rotation.y = Math.atan2(-moveVec.x, -moveVec.y);
+            const delta = sceneManager.clock.getDelta();
+
+            // Cập nhật Animation Mixers
+            sceneManager.mixers.forEach(mixer => mixer.update(delta));
+
+            const currentSpeed = playerState.isDriving ? playerState.speed * 1.8 : playerState.speed;
+
+            // 1. Move Player
+            if (playerState.moveVector.x !== 0 || playerState.moveVector.y !== 0) {
+                gameEntities.playerGroup.position.x += playerState.moveVector.x * currentSpeed;
+                gameEntities.playerGroup.position.z += playerState.moveVector.y * currentSpeed;
+                gameEntities.playerGroup.rotation.y = Math.atan2(-playerState.moveVector.x, -playerState.moveVector.y);
             }
 
-            // Tướng Địch đuổi theo Tướng Ta
-            if (enemyGroup) {
-                const dirToPlayer = new THREE.Vector3().subVectors(playerGroup.position, enemyGroup.position).normalize();
-                enemyGroup.position.add(dirToPlayer.multiplyScalar(0.08));
-                enemyGroup.lookAt(playerGroup.position);
+            // 2. Enemy AI Chasing
+            if (gameEntities.enemyGroup) {
+                const chaseDir = new THREE.Vector3()
+                    .subVectors(gameEntities.playerGroup.position, gameEntities.enemyGroup.position)
+                    .normalize();
+                gameEntities.enemyGroup.position.add(chaseDir.multiplyScalar(enemyState.speed));
+                gameEntities.enemyGroup.lookAt(gameEntities.playerGroup.position);
             }
 
-            // Chiêu Bijan tông Địch
-            if (isSkillActive) {
-                if (playerGroup.position.distanceTo(enemyGroup.position) < 3) {
-                    enemyHp -= 30; // Trừ 30% máu
-                    dismantleDragon();
-                    if (enemyHp <= 0) {
-                        enemyDeaths++;
-                        respawnEnemy();
-                        checkGameOver();
+            // 3. Collision Check: Driving Dragon -> Enemy
+            if (playerState.isDriving) {
+                const distToEnemy = gameEntities.playerGroup.position.distanceTo(gameEntities.enemyGroup.position);
+                if (distToEnemy < 3.2) {
+                    enemyState.hp -= 30; // Trừ 30% HP
+                    dismountDragonVehicle();
+                    if (enemyState.hp <= 0) {
+                        playerState.deaths++;
+                        resetEnemyPosition();
+                        checkMatchCondition();
                     }
-                    updateHUD();
+                    updateHUDDisplay();
                 }
             }
 
-            // Xử lý đạn Địch (Slime)
-            for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
-                let p = enemyProjectiles[i];
-                p.mesh.position.add(p.dir.clone().multiplyScalar(0.3));
-                p.life--;
+            // 4. Update Enemy Projectiles
+            for (let i = gameEntities.projectiles.length - 1; i >= 0; i--) {
+                let proj = gameEntities.projectiles[i];
+                proj.mesh.position.add(proj.direction.clone().multiplyScalar(0.35));
+                proj.lifeSpan--;
 
-                if (p.mesh.position.distanceTo(playerGroup.position) < 2) {
-                    playerHp -= 10;
-                    scene.remove(p.mesh);
-                    enemyProjectiles.splice(i, 1);
-                    if (playerHp <= 0) {
-                        playerDeaths++;
-                        respawnPlayer();
-                        checkGameOver();
+                if (proj.mesh.position.distanceTo(gameEntities.playerGroup.position) < 2.2) {
+                    playerState.hp -= 10;
+                    sceneManager.scene.remove(proj.mesh);
+                    gameEntities.projectiles.splice(i, 1);
+                    if (playerState.hp <= 0) {
+                        enemyState.deaths++;
+                        resetPlayerPosition();
+                        checkMatchCondition();
                     }
-                    updateHUD();
+                    updateHUDDisplay();
                     continue;
                 }
 
-                if (p.life <= 0) {
-                    scene.remove(p.mesh);
-                    enemyProjectiles.splice(i, 1);
+                if (proj.lifeSpan <= 0) {
+                    sceneManager.scene.remove(proj.mesh);
+                    gameEntities.projectiles.splice(i, 1);
                 }
             }
 
-            // Xử lý Lính 2 bên đánh lẫn nhau và tấn công Tướng
-            for (let i = minions.length - 1; i >= 0; i--) {
-                let m = minions[i];
+            // 5. Minion Battles System
+            for (let i = gameEntities.minions.length - 1; i >= 0; i--) {
+                let m = gameEntities.minions[i];
                 if (!m) continue;
 
-                let isEngaged = false;
+                let isFighting = false;
 
-                // Lính đánh Lính khác phe
-                for (let j = 0; j < minions.length; j++) {
-                    let target = minions[j];
-                    if (target && m.userData.isEnemy !== target.userData.isEnemy) {
-                        if (m.position.distanceTo(target.position) < 2) {
-                            target.userData.hp -= 0.1;
-                            isEngaged = true;
+                for (let j = 0; j < gameEntities.minions.length; j++) {
+                    let targetM = gameEntities.minions[j];
+                    if (targetM && m.userData.isEnemy !== targetM.userData.isEnemy) {
+                        if (m.position.distanceTo(targetM.position) < 2.0) {
+                            targetM.userData.hp -= 0.12;
+                            isFighting = true;
 
-                            if (target.userData.hp <= 0) {
-                                scene.remove(target);
-                                minions.splice(j, 1);
+                            if (targetM.userData.hp <= 0) {
+                                sceneManager.scene.remove(targetM);
+                                gameEntities.minions.splice(j, 1);
                             }
                             break;
                         }
                     }
                 }
 
-                // Nếu lính chưa va chạm với lính địch thì di chuyển tiếp
-                if (!isEngaged) {
+                if (!isFighting) {
                     if (m.userData.isEnemy) {
-                        m.position.z += 0.05;
-                        if (m.position.distanceTo(playerGroup.position) < 1.5) {
-                            playerHp -= 0.05;
-                            updateHUD();
+                        m.position.z += 0.06;
+                        if (m.position.distanceTo(gameEntities.playerGroup.position) < 1.8) {
+                            playerState.hp -= 0.04;
+                            updateHUDDisplay();
                         }
                     } else {
-                        m.position.z -= 0.05;
-                        if (m.position.distanceTo(enemyGroup.position) < 1.5) {
-                            enemyHp -= 0.05;
-                            updateHUD();
+                        m.position.z -= 0.06;
+                        if (m.position.distanceTo(gameEntities.enemyGroup.position) < 1.8) {
+                            enemyState.hp -= 0.04;
+                            updateHUDDisplay();
                         }
                     }
                 }
             }
 
-            // Camera bám theo Player
-            camera.position.set(playerGroup.position.x, playerGroup.position.y + 20, playerGroup.position.z + 20);
-            camera.lookAt(playerGroup.position);
+            // 6. Smooth Third-Person Camera Follow
+            if (gameEntities.playerGroup) {
+                const targetCamPos = new THREE.Vector3(
+                    gameEntities.playerGroup.position.x,
+                    gameEntities.playerGroup.position.y + 22,
+                    gameEntities.playerGroup.position.z + 22
+                );
+                sceneManager.camera.position.lerp(targetCamPos, 0.1);
+                sceneManager.camera.lookAt(gameEntities.playerGroup.position);
+            }
 
-            renderer.render(scene, camera);
+            sceneManager.renderer.render(sceneManager.scene, sceneManager.camera);
         }
 
-        // Bắt đầu game khi click vào nút vàng ở menu
+        // START GAME EVENT
         document.getElementById('gold-block-btn').addEventListener('click', () => {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('joystick-container').style.display = 'block';
-            document.getElementById('action-buttons').style.display = 'flex';
-            initGame();
+            document.getElementById('menu-overlay').style.display = 'none';
+            document.getElementById('hud-container').style.display = 'block';
+            initEngine();
         });
     </script>
 </body>
