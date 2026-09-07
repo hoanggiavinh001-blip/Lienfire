@@ -2,95 +2,97 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Game 3D Liên Quân Arena Mobile - Full Code</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Liên Quân 3D Arena - Full Model Engine v2.0</title>
     <style>
         * {
             box-sizing: border-box;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-        }
-        html, body {
             margin: 0;
             padding: 0;
+        }
+        html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #050508;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000000;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-        #game-container {
+        #game-view-container {
             position: relative;
             width: 100vw;
             height: 100vh;
         }
-        #webgl-canvas {
+        #render-canvas {
             width: 100%;
             height: 100%;
             display: block;
         }
-        /* UI START MENU */
-        #menu-overlay {
+        /* MAIN MENU SCREEN */
+        #main-menu-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(10, 10, 20, 0.95), rgba(0, 0, 0, 0.9));
+            background: radial-gradient(circle, rgba(16, 24, 48, 0.95) 0%, rgba(5, 8, 15, 0.98) 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100;
+            z-index: 200;
             color: #ffffff;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
         }
-        #menu-title {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: 2px;
+        .menu-title-glow {
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241, 196, 15, 0.8), 0 0 40px rgba(241, 196, 15, 0.4);
+            margin-bottom: 8px;
             text-transform: uppercase;
-            color: #f39c12;
-            text-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
-            margin-bottom: 10px;
         }
-        #menu-subtitle {
+        .menu-subtitle {
             font-size: 14px;
-            color: #bdc3c7;
-            margin-bottom: 30px;
+            color: #95a5a6;
+            margin-bottom: 35px;
+            font-weight: 500;
         }
-        #gold-block-btn {
-            width: 130px;
-            height: 130px;
-            background-color: #f1c40f;
+        #btn-start-game {
+            width: 140px;
+            height: 140px;
+            background-color: #f39c12;
             border: 4px solid #ffffff;
-            border-radius: 20px;
+            border-radius: 24px;
             cursor: pointer;
-            box-shadow: 0 0 30px rgba(241, 196, 15, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 35px rgba(243, 156, 18, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.6);
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
         }
-        #gold-block-btn:active {
-            transform: scale(0.92);
-            box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
+        #btn-start-game:active {
+            transform: scale(0.90);
+            box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
         }
-        #gold-block-btn::after {
-            content: 'BẤM ĐỂ CHƠI';
+        #btn-start-game::after {
+            content: 'VÀO TRẬN ĐẤU';
             position: absolute;
-            bottom: -28px;
+            bottom: -32px;
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
-            font-size: 12px;
-            font-weight: bold;
-            color: #f1c40f;
+            font-size: 13px;
+            font-weight: 800;
+            color: #f39c12;
+            letter-spacing: 1px;
         }
-        /* HUD UI */
-        #hud-container {
+        /* HUD UI DISPLAY */
+        #hud-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -98,446 +100,405 @@
             height: 100%;
             pointer-events: none;
             display: none;
-            z-index: 10;
+            z-index: 50;
         }
-        .stats-panel {
+        .player-status-card {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            background: rgba(15, 20, 30, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 12px 18px;
+            top: 12px;
+            left: 12px;
+            background: rgba(10, 14, 26, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 10px 16px;
             color: #ffffff;
-            font-size: 14px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            min-width: 220px;
         }
-        .hp-bar-bg {
-            width: 180px;
-            height: 12px;
-            background-color: #2c3e50;
-            border-radius: 6px;
+        .status-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .status-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ecf0f1;
+        }
+        .hp-bar-track {
+            width: 100%;
+            height: 10px;
+            background-color: #1a252f;
+            border-radius: 5px;
             overflow: hidden;
             margin: 4px 0 8px 0;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .hp-bar-fill-player {
+        .hp-fill-player {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #2ecc71, #27ae60);
-            transition: width 0.2s ease;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            transition: width 0.15s ease-out;
         }
-        .hp-bar-fill-enemy {
+        .hp-fill-enemy {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #e74c3c, #c0392b);
-            transition: width 0.2s ease;
+            background: linear-gradient(90deg, #c0392b, #e74c3c);
+            transition: width 0.15s ease-out;
         }
-        .score-board {
-            margin-top: 5px;
-            font-size: 13px;
-            color: #f39c12;
-            font-weight: bold;
+        .match-score-text {
+            font-size: 12px;
+            color: #f1c40f;
+            font-weight: 800;
+            margin-top: 4px;
         }
-        /* CONTROLS UI */
-        #joystick-area {
+        /* CONTROLS AREA */
+        #virtual-joystick-wrapper {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 130px;
-            height: 130px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.25);
+            bottom: 25px;
+            left: 25px;
+            width: 140px;
+            height: 140px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             pointer-events: auto;
             touch-action: none;
         }
-        #joystick-handle {
+        #virtual-joystick-knob {
             position: absolute;
-            top: 40px;
-            left: 40px;
+            top: 45px;
+            left: 45px;
             width: 50px;
             height: 50px;
-            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(200,200,200,0.5) 100%);
+            background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,180,180,0.6) 100%);
             border-radius: 50%;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
-        #skills-area {
+        #action-buttons-wrapper {
             position: absolute;
-            bottom: 35px;
-            right: 35px;
+            bottom: 30px;
+            right: 30px;
             display: flex;
-            gap: 20px;
+            gap: 18px;
             pointer-events: auto;
         }
-        .action-btn {
-            width: 75px;
-            height: 75px;
+        .game-btn {
+            width: 78px;
+            height: 78px;
             border-radius: 50%;
             border: 2px solid #ffffff;
             color: #ffffff;
-            font-weight: bold;
+            font-weight: 900;
             font-size: 13px;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
             cursor: pointer;
             touch-action: manipulation;
         }
-        #btn-attack-ctrl {
-            background: radial-gradient(circle, #e74c3c 0%, #c0392b 100%);
+        #btn-attack {
+            background: radial-gradient(circle, #e74c3c 0%, #95a5a6 0%, #c0392b 100%);
         }
-        #btn-skill-ctrl {
+        #btn-skill {
             background: radial-gradient(circle, #2ecc71 0%, #27ae60 100%);
         }
-        .btn-disabled {
-            opacity: 0.45;
+        .btn-cooldown {
+            opacity: 0.4;
             filter: grayscale(100%);
             pointer-events: none;
         }
-        #debug-log {
+        #console-debug-box {
             position: absolute;
-            bottom: 10px;
+            bottom: 8px;
             left: 50%;
             transform: translateX(-50%);
-            color: #00ff00;
-            font-family: monospace;
-            font-size: 10px;
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            border-radius: 4px;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            background: rgba(0,0,0,0.75);
+            padding: 4px 10px;
+            border-radius: 6px;
             pointer-events: none;
+            border: 1px solid rgba(0,255,102,0.3);
         }
     </style>
-    <!-- THREE.JS ENGINE -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- CANVAS -->
-        <canvas id="webgl-canvas"></canvas>
+    <div id="game-view-container">
+        <canvas id="render-canvas"></canvas>
 
         <!-- MENU OVERLAY -->
-        <div id="menu-overlay">
-            <div id="menu-title">LIÊN QUÂN 3D ARENA</div>
-            <div id="menu-subtitle">Chọn vào khối vàng để vào trận đấu</div>
-            <div id="gold-block-btn"></div>
+        <div id="main-menu-overlay">
+            <div class="menu-title-glow">LIÊN QUÂN 3D ARENA</div>
+            <div class="menu-subtitle">Nhấn khối vàng để bắt đầu tham chiến</div>
+            <div id="btn-start-game"></div>
         </div>
 
         <!-- HUD GAME -->
-        <div id="hud-container">
-            <div class="stats-panel">
-                <div>Máu Tướng (Bijan): <span id="txt-player-hp">100</span>/100</div>
-                <div class="hp-bar-bg"><div id="hp-player-bar" class="hp-bar-fill-player"></div></div>
-                <div>Máu Địch (Preyta): <span id="txt-enemy-hp">100</span>/100</div>
-                <div class="hp-bar-bg"><div id="hp-enemy-bar" class="hp-bar-fill-enemy"></div></div>
-                <div class="score-board">
-                    Tỉ Số Kills: <span id="txt-kills">0</span>/5 | Chết: <span id="txt-deaths">0</span>/5
+        <div id="hud-layer">
+            <div class="player-status-card">
+                <div class="status-title">Tướng Ta (Bijan)</div>
+                <div class="status-value"><span id="val-player-hp">100</span>/100</div>
+                <div class="hp-bar-track"><div id="bar-player-hp" class="hp-fill-player"></div></div>
+
+                <div class="status-title" style="margin-top:6px;">Tướng Địch (Preyta)</div>
+                <div class="status-value"><span id="val-enemy-hp">100</span>/100</div>
+                <div class="hp-bar-track"><div id="bar-enemy-hp" class="hp-fill-enemy"></div></div>
+
+                <div class="match-score-text">
+                    Kills: <span id="val-kills">0</span>/5 | Chết: <span id="val-deaths">0</span>/5
                 </div>
             </div>
 
             <!-- JOYSTICK -->
-            <div id="joystick-area">
-                <div id="joystick-handle"></div>
+            <div id="virtual-joystick-wrapper">
+                <div id="virtual-joystick-knob"></div>
             </div>
 
-            <!-- SKILL BUTTONS -->
-            <div id="skills-area">
-                <div id="btn-skill-ctrl" class="action-btn">CHIÊU (R)</div>
-                <div id="btn-attack-ctrl" class="action-btn">ĐÁNH</div>
+            <!-- BUTTONS -->
+            <div id="action-buttons-wrapper">
+                <div id="btn-skill" class="game-btn">CHIÊU (R)</div>
+                <div id="btn-attack" class="game-btn">ĐÁNH</div>
             </div>
         </div>
 
-        <div id="debug-log">Trạng thái Model: Đang sẵn sàng...</div>
+        <div id="console-debug-box">Khởi tạo hệ thống Model 3D...</div>
     </div>
 
     <script>
         /**
-         * GLOBAL GAME CONFIG & STATE MANAGEMENT
+         * ENGINE CONFIGURATION & GLOBAL STATE
          */
-        const GAME_CONFIG = {
-            mapModelPath: '5v5_game_map.glb',
-            playerModelPath: 'bijan_arena_of_valor.glb',
-            dragonModelPath: 'holy_dragon_arena_of_valor.glb',
-            enemyModelPath: 'preyta_arena_of_valor.glb',
-            slimeModelPath: 'minecraft_slime.glb',
-            menuImgPath: 'IMG_0511.jpeg',
-            basePlayerPos: new THREE.Vector3(0, 0, 42),
-            baseEnemyPos: new THREE.Vector3(0, 0, -42),
-            maxHp: 100,
-            maxDeaths: 5,
-            skillCooldownTime: 5000
+        const GAME_ASSETS = {
+            map: '5v5_game_map.glb',
+            player: 'bijan_arena_of_valor.glb',
+            dragon: 'holy_dragon_arena_of_valor.glb',
+            enemy: 'preyta_arena_of_valor.glb',
+            slime: 'minecraft_slime.glb',
+            menuImage: 'IMG_0511.jpeg'
         };
 
-        let sceneManager = {
+        const WORLD_SETTINGS = {
+            spawnPlayerPos: new THREE.Vector3(0, 0, 40),
+            spawnEnemyPos: new THREE.Vector3(0, 0, -40),
+            maxHealth: 100,
+            maxKillsToWin: 5,
+            skillCooldownMs: 5000
+        };
+
+        let coreEngine = {
             scene: null,
             camera: null,
             renderer: null,
-            gltfLoader: null,
+            loader: null,
             clock: new THREE.Clock(),
             mixers: []
         };
 
-        let gameEntities = {
+        let activeEntities = {
             playerGroup: null,
             enemyGroup: null,
-            playerMesh: null,
-            enemyMesh: null,
-            dragonMesh: null,
-            minions: [],
-            projectiles: []
+            playerModel: null,
+            enemyModel: null,
+            dragonVehicleModel: null,
+            minionList: [],
+            projectileList: []
         };
 
-        let playerState = {
+        let playerRuntime = {
             hp: 100,
             deaths: 0,
-            isDriving: false,
-            canUseSkill: true,
-            moveVector: { x: 0, y: 0 },
-            speed: 0.22
+            kills: 0,
+            isDrivingDragon: false,
+            canSkill: true,
+            joystickVector: { x: 0, y: 0 },
+            moveSpeed: 0.24
         };
 
-        let enemyState = {
+        let enemyRuntime = {
             hp: 100,
-            deaths: 0,
-            speed: 0.08
+            chaseSpeed: 0.09
         };
 
-        function setDebugLog(msg) {
-            document.getElementById('debug-log').innerText = msg;
+        function printDebug(msg) {
+            document.getElementById('console-debug-box').innerText = msg;
         }
 
-        // Setup Menu Image (IMG_0511.jpeg)
-        const menuBtn = document.getElementById('gold-block-btn');
-        const imgChecker = new Image();
-        imgChecker.src = GAME_CONFIG.menuImgPath;
-        imgChecker.onload = () => {
-            menuBtn.style.backgroundImage = `url('${GAME_CONFIG.menuImgPath}')`;
+        // Setup Menu Image
+        const startBtn = document.getElementById('btn-start-game');
+        const imgPreload = new Image();
+        imgPreload.src = GAME_ASSETS.menuImage;
+        imgPreload.onload = () => {
+            startBtn.style.backgroundImage = `url('${GAME_ASSETS.menuImage}')`;
         };
 
         /**
-         * GLTF SAFE MODEL LOADER SYSTEM
+         * ADVANCED GLTF ASSET RETRY LOADER (LOẠI BỎ HOÀN TOÀN KHỐI HỘP CUBE)
          */
-        function safeLoadGLTF(filename, targetSize, onSuccess, onErrorFallback) {
-            const pathsToTry = [
-                filename,
-                './' + filename,
-                filename.toLowerCase(),
-                filename.toUpperCase()
+        function forceLoadGLTFModel(assetPath, targetSize, autoElevateY, onSuccess) {
+            const pathVariants = [
+                assetPath,
+                './' + assetPath,
+                './' + assetPath.toLowerCase(),
+                './' + assetPath.toUpperCase()
             ];
 
             let attemptIndex = 0;
 
-            function tryNext() {
-                if (attemptIndex >= pathsToTry.length) {
-                    setDebugLog(`Không nạp được file ${filename}, chuyển sang khối giả lập.`);
-                    if (onErrorFallback) onErrorFallback();
+            function tryFetch() {
+                if (attemptIndex >= pathVariants.length) {
+                    printDebug(`[ĐANG THỬ LẠI] Đang nạp lại file: ${assetPath}...`);
+                    attemptIndex = 0; // Tiếp tục thử lại không dừng cho đến khi tải được
+                    setTimeout(tryFetch, 1000);
                     return;
                 }
 
-                const currentPath = pathsToTry[attemptIndex];
+                const currentPath = pathVariants[attemptIndex];
                 attemptIndex++;
 
-                sceneManager.gltfLoader.load(
+                coreEngine.loader.load(
                     currentPath,
                     (gltf) => {
-                        const model = gltf.scene;
-                        
-                        // Scale và Căn chỉnh
-                        const box = new THREE.Box3().setFromObject(model);
+                        const loadedScene = gltf.scene;
+
+                        // Tự động tính toán Bounding Box chuẩn xác
+                        const box = new THREE.Box3().setFromObject(loadedScene);
                         const size = box.getSize(new THREE.Vector3());
                         const maxDim = Math.max(size.x, size.y, size.z);
+
                         if (maxDim > 0) {
                             const scaleFactor = targetSize / maxDim;
-                            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                            loadedScene.scale.set(scaleFactor, scaleFactor, scaleFactor);
                         }
 
-                        // Traverse Materials & Shadows
-                        model.traverse((child) => {
-                            if (child.isMesh) {
-                                child.castShadow = true;
-                                child.receiveShadow = true;
-                                if (child.material) {
-                                    child.material.needsUpdate = true;
-                                    child.material.depthWrite = true;
+                        // Điều chỉnh tọa độ Y nâng cao tránh bị chìm dưới Map
+                        if (autoElevateY) {
+                            loadedScene.position.y = 0.2;
+                        }
+
+                        // Traverse Materials & Enable Shadowing
+                        loadedScene.traverse((node) => {
+                            if (node.isMesh) {
+                                node.castShadow = true;
+                                node.receiveShadow = true;
+                                if (node.material) {
+                                    node.material.depthWrite = true;
+                                    node.material.needsUpdate = true;
                                 }
                             }
                         });
 
-                        // Animation Mixer nếu có
+                        // Play Animation nếu có
                         if (gltf.animations && gltf.animations.length > 0) {
-                            const mixer = new THREE.AnimationMixer(model);
+                            const mixer = new THREE.AnimationMixer(loadedScene);
                             const action = mixer.clipAction(gltf.animations[0]);
                             action.play();
-                            sceneManager.mixers.push(mixer);
+                            coreEngine.mixers.push(mixer);
                         }
 
-                        setDebugLog(`Nạp thành công Model: ${filename}`);
-                        if (onSuccess) onSuccess(model);
+                        printDebug(`Đã nạp Model 3D thành công: ${assetPath}`);
+                        if (onSuccess) onSuccess(loadedScene);
                     },
                     undefined,
-                    (err) => {
-                        tryNext();
+                    (error) => {
+                        tryFetch();
                     }
                 );
             }
 
-            tryNext();
+            tryFetch();
         }
 
         /**
-         * INITIALIZE THREE.JS SYSTEM
+         * THREE.JS ENGINE INITIALIZATION
          */
-        function initEngine() {
-            const canvas = document.getElementById('webgl-canvas');
-            sceneManager.scene = new THREE.Scene();
-            sceneManager.scene.background = new THREE.Color(0x71b2c9);
-            sceneManager.scene.fog = new THREE.FogExp2(0x71b2c9, 0.008);
+        function initialize3DEngine() {
+            const canvasElem = document.getElementById('render-canvas');
+            coreEngine.scene = new THREE.Scene();
+            coreEngine.scene.background = new THREE.Color(0x68a0b0);
+            coreEngine.scene.fog = new THREE.FogExp2(0x68a0b0, 0.006);
 
-            sceneManager.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            coreEngine.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            sceneManager.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
-            sceneManager.renderer.setSize(window.innerWidth, window.innerHeight);
-            sceneManager.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            sceneManager.renderer.shadowMap.enabled = true;
-            sceneManager.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            sceneManager.renderer.outputEncoding = THREE.sRGBEncoding;
+            coreEngine.renderer = new THREE.WebGLRenderer({ canvas: canvasElem, antialias: true, alpha: false });
+            coreEngine.renderer.setSize(window.innerWidth, window.innerHeight);
+            coreEngine.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            coreEngine.renderer.shadowMap.enabled = true;
+            coreEngine.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            coreEngine.renderer.outputEncoding = THREE.sRGBEncoding;
 
-            sceneManager.gltfLoader = new THREE.GLTFLoader();
+            coreEngine.loader = new THREE.GLTFLoader();
 
-            // Setup Lighting
-            const ambLight = new THREE.AmbientLight(0xffffff, 1.2);
-            sceneManager.scene.add(ambLight);
+            // Direct Light & Ambient Light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
+            coreEngine.scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(40, 80, 40);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.near = 0.5;
-            dirLight.shadow.camera.far = 250;
-            const d = 60;
-            dirLight.shadow.camera.left = -d;
-            dirLight.shadow.camera.right = d;
-            dirLight.shadow.camera.top = d;
-            dirLight.shadow.camera.bottom = -d;
-            sceneManager.scene.add(dirLight);
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.6);
+            sunLight.position.set(50, 90, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 300;
+            const shadowRange = 70;
+            sunLight.shadow.camera.left = -shadowRange;
+            sunLight.shadow.camera.right = shadowRange;
+            sunLight.shadow.camera.top = shadowRange;
+            sunLight.shadow.camera.bottom = -shadowRange;
+            coreEngine.scene.add(sunLight);
 
             // Container Groups
-            gameEntities.playerGroup = new THREE.Group();
-            gameEntities.enemyGroup = new THREE.Group();
-            sceneManager.scene.add(gameEntities.playerGroup);
-            sceneManager.scene.add(gameEntities.enemyGroup);
+            activeEntities.playerGroup = new THREE.Group();
+            activeEntities.enemyGroup = new THREE.Group();
+            coreEngine.scene.add(activeEntities.playerGroup);
+            coreEngine.scene.add(activeEntities.enemyGroup);
 
             // 1. NẠP MAP (5v5_game_map.glb)
-            safeLoadGLTF(
-                GAME_CONFIG.mapModelPath,
-                110,
-                (model) => {
-                    sceneManager.scene.add(model);
-                },
-                () => {
-                    // Fallback Map mặc định
-                    buildFallbackMap();
-                }
-            );
+            forceLoadGLTFModel(GAME_ASSETS.map, 115, false, (mapModel) => {
+                coreEngine.scene.add(mapModel);
+            });
 
-            // 2. NẠP PLAYER BIJAN (bijan_arena_of_valor.glb)
-            safeLoadGLTF(
-                GAME_CONFIG.playerModelPath,
-                3.2,
-                (model) => {
-                    gameEntities.playerMesh = model;
-                    gameEntities.playerGroup.add(model);
-                    resetPlayerPosition();
-                },
-                () => {
-                    // Fallback khối vàng
-                    const geom = new THREE.BoxGeometry(2, 2, 2);
-                    const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3 });
-                    gameEntities.playerMesh = new THREE.Mesh(geom, mat);
-                    gameEntities.playerGroup.add(gameEntities.playerMesh);
-                    resetPlayerPosition();
-                }
-            );
+            // 2. NẠP TƯỚNG TA BIJAN (bijan_arena_of_valor.glb)
+            forceLoadGLTFModel(GAME_ASSETS.player, 3.5, true, (playerModel) => {
+                activeEntities.playerModel = playerModel;
+                activeEntities.playerGroup.add(playerModel);
+                resetPlayerState();
+            });
 
-            // 3. NẠP ENEMY PREYTA (preyta_arena_of_valor.glb)
-            safeLoadGLTF(
-                GAME_CONFIG.enemyModelPath,
-                3.2,
-                (model) => {
-                    gameEntities.enemyMesh = model;
-                    gameEntities.enemyGroup.add(model);
-                    resetEnemyPosition();
-                },
-                () => {
-                    // Fallback khối đỏ
-                    const geom = new THREE.BoxGeometry(2, 2, 2);
-                    const mat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.3 });
-                    gameEntities.enemyMesh = new THREE.Mesh(geom, mat);
-                    gameEntities.enemyGroup.add(gameEntities.enemyMesh);
-                    resetEnemyPosition();
-                }
-            );
+            // 3. NẠP TƯỚNG ĐỊCH PREYTA (preyta_arena_of_valor.glb)
+            forceLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, (enemyModel) => {
+                activeEntities.enemyModel = enemyModel;
+                activeEntities.enemyGroup.add(enemyModel);
+                resetEnemyState();
+            });
 
-            // Spawners & Loops
-            setInterval(enemySkillRoutine, 5000);
-            setInterval(spawnMinionWave, 15000);
+            // Timers & Spawners
+            setInterval(enemyAttackRoutine, 4500);
+            setInterval(spawnMinionWave, 16000);
             spawnMinionWave();
 
-            setupControlsUI();
-            window.addEventListener('resize', onWindowResize);
+            bindTouchControls();
+            window.addEventListener('resize', handleWindowResize);
 
-            // Run Loop
-            renderLoop();
+            // Main Loop
+            gameMainLoop();
         }
 
-        /**
-         * FALLBACK MAP CREATOR WITH 3 LANES & TURRETS
-         */
-        function buildFallbackMap() {
-            const groundGeom = new THREE.BoxGeometry(120, 1, 120);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.8 });
-            const ground = new THREE.Mesh(groundGeom, groundMat);
-            ground.position.y = -0.5;
-            ground.receiveShadow = true;
-            sceneManager.scene.add(ground);
-
-            // Lanes & Turrets
-            const laneLanes = [-25, 0, 25];
-            laneLanes.forEach(x => {
-                // Ta (Xanh)
-                const turFriendly = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.2, 1.5, 6, 16),
-                    new THREE.MeshStandardMaterial({ color: 0x2980b9 })
-                );
-                turFriendly.position.set(x, 3, 18);
-                turFriendly.castShadow = true;
-                sceneManager.scene.add(turFriendly);
-
-                // Địch (Đỏ)
-                const turEnemy = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.2, 1.5, 6, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xc0392b })
-                );
-                turEnemy.position.set(x, 3, -18);
-                turEnemy.castShadow = true;
-                sceneManager.scene.add(turEnemy);
-            });
-        }
-
-        function resetPlayerPosition() {
-            gameEntities.playerGroup.position.copy(GAME_CONFIG.basePlayerPos);
-            playerState.hp = 100;
+        function resetPlayerState() {
+            activeEntities.playerGroup.position.copy(WORLD_SETTINGS.spawnPlayerPos);
+            playerRuntime.hp = 100;
             updateHUDDisplay();
         }
 
-        function resetEnemyPosition() {
-            gameEntities.enemyGroup.position.copy(GAME_CONFIG.baseEnemyPos);
-            enemyState.hp = 100;
+        function resetEnemyState() {
+            activeEntities.enemyGroup.position.copy(WORLD_SETTINGS.spawnEnemyPos);
+            enemyRuntime.hp = 100;
             updateHUDDisplay();
         }
 
@@ -545,337 +506,289 @@
          * MINION SPAWN SYSTEM
          */
         function spawnMinionWave() {
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 4; i++) {
                 // Lính Ta
-                const mPlayer = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.2, 1.2, 1.2),
-                    new THREE.MeshStandardMaterial({ color: 0x00ffff })
+                const minionBlue = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
+                    new THREE.MeshStandardMaterial({ color: 0x3498db })
                 );
-                mPlayer.position.set(-12 + i * 6, 0.6, 36);
-                mPlayer.castShadow = true;
-                mPlayer.userData = { isEnemy: false, hp: 20 };
-                sceneManager.scene.add(mPlayer);
-                gameEntities.minions.push(mPlayer);
+                minionBlue.position.set(-9 + i * 6, 0.6, 32);
+                minionBlue.castShadow = true;
+                minionBlue.userData = { isEnemy: false, hp: 25 };
+                coreEngine.scene.add(minionBlue);
+                activeEntities.minionList.push(minionBlue);
 
                 // Lính Địch
-                const mEnemy = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.2, 1.2, 1.2),
-                    new THREE.MeshStandardMaterial({ color: 0x8e44ad })
+                const minionRed = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
+                    new THREE.MeshStandardMaterial({ color: 0x9b59b6 })
                 );
-                mEnemy.position.set(-12 + i * 6, 0.6, -36);
-                mEnemy.castShadow = true;
-                mEnemy.userData = { isEnemy: true, hp: 20 };
-                sceneManager.scene.add(mEnemy);
-                gameEntities.minions.push(mEnemy);
+                minionRed.position.set(-9 + i * 6, 0.6, -32);
+                minionRed.castShadow = true;
+                minionRed.userData = { isEnemy: true, hp: 25 };
+                coreEngine.scene.add(minionRed);
+                activeEntities.minionList.push(minionRed);
             }
         }
 
         /**
-         * ENEMY ATTACK LOGIC (minecraft_slime.glb)
+         * ENEMY SKILL (minecraft_slime.glb)
          */
-        function enemySkillRoutine() {
-            if (enemyState.hp <= 0) return;
+        function enemyAttackRoutine() {
+            if (enemyRuntime.hp <= 0) return;
 
-            safeLoadGLTF(
-                GAME_CONFIG.slimeModelPath,
-                1.5,
-                (slimeModel) => {
-                    launchEnemyProjectile(slimeModel);
-                },
-                () => {
-                    const fallbackProj = new THREE.Mesh(
-                        new THREE.BoxGeometry(1, 1, 1),
-                        new THREE.MeshStandardMaterial({ color: 0x2ecc71 })
-                    );
-                    launchEnemyProjectile(fallbackProj);
-                }
-            );
+            forceLoadGLTFModel(GAME_ASSETS.slime, 1.8, false, (slimeModel) => {
+                launchEnemyProjectile(slimeModel);
+            });
         }
 
-        function launchEnemyProjectile(projMesh) {
-            projMesh.position.copy(gameEntities.enemyGroup.position);
-            sceneManager.scene.add(projMesh);
+        function launchEnemyProjectile(projModel) {
+            projModel.position.copy(activeEntities.enemyGroup.position);
+            projModel.position.y = 1.2;
+            coreEngine.scene.add(projModel);
 
-            const targetDir = new THREE.Vector3()
-                .subVectors(gameEntities.playerGroup.position, gameEntities.enemyGroup.position)
+            const flightDir = new THREE.Vector3()
+                .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
                 .normalize();
 
-            gameEntities.projectiles.push({
-                mesh: projMesh,
-                direction: targetDir,
-                lifeSpan: 130
+            activeEntities.projectileList.push({
+                mesh: projModel,
+                direction: flightDir,
+                ttl: 140
             });
         }
 
         /**
-         * PLAYER SKILL SYSTEM (holy_dragon_arena_of_valor.glb)
+         * PLAYER SKILL - BIJAN LÁI XE RỒNG (holy_dragon_arena_of_valor.glb)
          */
-        function triggerBijanSkill() {
-            if (!playerState.canUseSkill || playerState.isDriving) return;
+        function executeBijanSkill() {
+            if (!playerRuntime.canSkill || playerRuntime.isDrivingDragon) return;
 
-            playerState.isDriving = true;
-            playerState.canUseSkill = false;
+            playerRuntime.isDrivingDragon = true;
+            playerRuntime.canSkill = false;
 
-            const skillBtn = document.getElementById('btn-skill-ctrl');
-            skillBtn.classList.add('btn-disabled');
+            const btnSkill = document.getElementById('btn-skill');
+            btnSkill.classList.add('btn-cooldown');
 
-            safeLoadGLTF(
-                GAME_CONFIG.dragonModelPath,
-                4.5,
-                (dragonModel) => {
-                    gameEntities.dragonMesh = dragonModel;
-                    mountDragonVehicle();
-                },
-                () => {
-                    const fallbackDragon = new THREE.Mesh(
-                        new THREE.BoxGeometry(3, 1.8, 4.5),
-                        new THREE.MeshStandardMaterial({ color: 0xf1c40f })
-                    );
-                    gameEntities.dragonMesh = fallbackDragon;
-                    mountDragonVehicle();
-                }
-            );
+            // Nạp Model Xe Rồng
+            forceLoadGLTFModel(GAME_ASSETS.dragon, 4.8, false, (dragonModel) => {
+                activeEntities.dragonVehicleModel = dragonModel;
+                mountDragonVehicle();
+            });
 
-            // Recovery Timer 5s
+            // Cooldown Timer
             setTimeout(() => {
-                playerState.canUseSkill = true;
-                skillBtn.classList.remove('btn-disabled');
-            }, GAME_CONFIG.skillCooldownTime);
+                playerRuntime.canSkill = true;
+                btnSkill.classList.remove('btn-cooldown');
+            }, WORLD_SETTINGS.skillCooldownMs);
         }
 
         function mountDragonVehicle() {
-            gameEntities.playerGroup.add(gameEntities.dragonMesh);
-            if (gameEntities.playerMesh) {
-                gameEntities.playerMesh.position.y = 2.2;
+            if (activeEntities.dragonVehicleModel) {
+                activeEntities.playerGroup.add(activeEntities.dragonVehicleModel);
+                if (activeEntities.playerModel) {
+                    activeEntities.playerModel.position.y = 2.4;
+                }
             }
         }
 
         function dismountDragonVehicle() {
-            if (!playerState.isDriving) return;
-            playerState.isDriving = false;
+            if (!playerRuntime.isDrivingDragon) return;
+            playerRuntime.isDrivingDragon = false;
 
-            if (gameEntities.dragonMesh) {
-                gameEntities.playerGroup.remove(gameEntities.dragonMesh);
-                gameEntities.dragonMesh = null;
+            if (activeEntities.dragonVehicleModel) {
+                activeEntities.playerGroup.remove(activeEntities.dragonVehicleModel);
+                activeEntities.dragonVehicleModel = null;
             }
-            if (gameEntities.playerMesh) {
-                gameEntities.playerMesh.position.y = 0;
+            if (activeEntities.playerModel) {
+                activeEntities.playerModel.position.y = 0;
             }
         }
 
         /**
          * MELEE ATTACK
          */
-        function triggerNormalAttack() {
-            const dist = gameEntities.playerGroup.position.distanceTo(gameEntities.enemyGroup.position);
-            if (dist < 4.5) {
-                enemyState.hp -= 10;
-                if (enemyState.hp <= 0) {
-                    playerState.deaths++;
-                    resetEnemyPosition();
-                    checkMatchCondition();
+        function executeNormalAttack() {
+            const distance = activeEntities.playerGroup.position.distanceTo(activeEntities.enemyGroup.position);
+            if (distance < 5.0) {
+                enemyRuntime.hp -= 12;
+                if (enemyRuntime.hp <= 0) {
+                    playerRuntime.kills++;
+                    resetEnemyState();
+                    verifyWinLossState();
                 }
                 updateHUDDisplay();
             }
         }
 
-        function checkMatchCondition() {
-            if (playerState.deaths >= GAME_CONFIG.maxDeaths) {
-                alert("BẠN ĐÃ THẮNG TRẬN ĐẤU!");
+        function verifyWinLossState() {
+            if (playerRuntime.kills >= WORLD_SETTINGS.maxKillsToWin) {
+                alert("BẠN ĐÃ CHIẾN THẮNG TRẬN ĐẤU!");
                 restartFullMatch();
-            } else if (enemyState.deaths >= GAME_CONFIG.maxDeaths) {
-                alert("BẠN ĐÃ THUA TRẬN ĐẤU!");
+            } else if (playerRuntime.deaths >= WORLD_SETTINGS.maxKillsToWin) {
+                alert("THẤT BẠI! ĐỊCH ĐÃ THẮNG.");
                 restartFullMatch();
             }
         }
 
         function restartFullMatch() {
-            playerState.deaths = 0;
-            enemyState.deaths = 0;
-            resetPlayerPosition();
-            resetEnemyPosition();
+            playerRuntime.kills = 0;
+            playerRuntime.deaths = 0;
+            resetPlayerState();
+            resetEnemyState();
         }
 
         function updateHUDDisplay() {
-            document.getElementById('txt-player-hp').innerText = Math.max(0, Math.ceil(playerState.hp));
-            document.getElementById('txt-enemy-hp').innerText = Math.max(0, Math.ceil(enemyState.hp));
-            document.getElementById('hp-player-bar').style.width = `${Math.max(0, playerState.hp)}%`;
-            document.getElementById('hp-enemy-bar').style.width = `${Math.max(0, enemyState.hp)}%`;
-            document.getElementById('txt-kills').innerText = playerState.deaths;
-            document.getElementById('txt-deaths').innerText = enemyState.deaths;
+            document.getElementById('val-player-hp').innerText = Math.max(0, Math.ceil(playerRuntime.hp));
+            document.getElementById('val-enemy-hp').innerText = Math.max(0, Math.ceil(enemyRuntime.hp));
+            document.getElementById('bar-player-hp').style.width = `${Math.max(0, playerRuntime.hp)}%`;
+            document.getElementById('bar-enemy-hp').style.width = `${Math.max(0, enemyRuntime.hp)}%`;
+            document.getElementById('val-kills').innerText = playerRuntime.kills;
+            document.getElementById('val-deaths').innerText = playerRuntime.deaths;
         }
 
         /**
-         * TOUCH & JOYSTICK CONTROLS
+         * CONTROLS BINDING
          */
-        function setupControlsUI() {
-            const joyArea = document.getElementById('joystick-area');
-            const joyHandle = document.getElementById('joystick-handle');
-            let isTouching = false;
-            let touchOrigin = { x: 0, y: 0 };
+        function bindTouchControls() {
+            const joyBox = document.getElementById('virtual-joystick-wrapper');
+            const joyKnob = document.getElementById('virtual-joystick-knob');
+            let isDragging = false;
+            let centerPoint = { x: 0, y: 0 };
 
-            joyArea.addEventListener('touchstart', (e) => {
-                isTouching = true;
-                touchOrigin = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            joyBox.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                centerPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             });
 
             window.addEventListener('touchmove', (e) => {
-                if (!isTouching) return;
+                if (!isDragging) return;
                 const touch = e.touches[0];
-                const deltaX = touch.clientX - touchOrigin.x;
-                const deltaY = touch.clientY - touchOrigin.y;
-                const dist = Math.min(Math.hypot(deltaX, deltaY), 45);
-                const angle = Math.atan2(deltaY, deltaX);
+                const dx = touch.clientX - centerPoint.x;
+                const dy = touch.clientY - centerPoint.y;
+                const dist = Math.min(Math.hypot(dx, dy), 45);
+                const angle = Math.atan2(dy, dx);
 
-                joyHandle.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-                playerState.moveVector = { x: Math.cos(angle) * (dist / 45), y: Math.sin(angle) * (dist / 45) };
+                joyKnob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                playerRuntime.joystickVector = { x: Math.cos(angle) * (dist / 45), y: Math.sin(angle) * (dist / 45) };
             });
 
             window.addEventListener('touchend', () => {
-                isTouching = false;
-                joyHandle.style.transform = 'translate(0px, 0px)';
-                playerState.moveVector = { x: 0, y: 0 };
+                isDragging = false;
+                joyKnob.style.transform = 'translate(0px, 0px)';
+                playerRuntime.joystickVector = { x: 0, y: 0 };
             });
 
-            // Action Buttons
-            document.getElementById('btn-attack-ctrl').addEventListener('click', triggerNormalAttack);
-            document.getElementById('btn-skill-ctrl').addEventListener('click', triggerBijanSkill);
+            document.getElementById('btn-attack').addEventListener('click', executeNormalAttack);
+            document.getElementById('btn-skill').addEventListener('click', executeBijanSkill);
         }
 
-        function onWindowResize() {
-            sceneManager.camera.aspect = window.innerWidth / window.innerHeight;
-            sceneManager.camera.updateProjectionMatrix();
-            sceneManager.renderer.setSize(window.innerWidth, window.innerHeight);
+        function handleWindowResize() {
+            coreEngine.camera.aspect = window.innerWidth / window.innerHeight;
+            coreEngine.camera.updateProjectionMatrix();
+            coreEngine.renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         /**
-         * MAIN GAME LOOP
+         * GAME RENDER & TICK LOOP
          */
-        function renderLoop() {
-            requestAnimationFrame(renderLoop);
+        function gameMainLoop() {
+            requestAnimationFrame(gameMainLoop);
 
-            const delta = sceneManager.clock.getDelta();
+            const delta = coreEngine.clock.getDelta();
 
-            // Cập nhật Animation Mixers
-            sceneManager.mixers.forEach(mixer => mixer.update(delta));
+            // Cập nhật Animation
+            coreEngine.mixers.forEach(m => m.update(delta));
 
-            const currentSpeed = playerState.isDriving ? playerState.speed * 1.8 : playerState.speed;
+            const currentSpeed = playerRuntime.isDrivingDragon ? playerRuntime.moveSpeed * 1.9 : playerRuntime.moveSpeed;
 
-            // 1. Move Player
-            if (playerState.moveVector.x !== 0 || playerState.moveVector.y !== 0) {
-                gameEntities.playerGroup.position.x += playerState.moveVector.x * currentSpeed;
-                gameEntities.playerGroup.position.z += playerState.moveVector.y * currentSpeed;
-                gameEntities.playerGroup.rotation.y = Math.atan2(-playerState.moveVector.x, -playerState.moveVector.y);
+            // 1. Di chuyển Tướng Ta
+            if (playerRuntime.joystickVector.x !== 0 || playerRuntime.joystickVector.y !== 0) {
+                activeEntities.playerGroup.position.x += playerRuntime.joystickVector.x * currentSpeed;
+                activeEntities.playerGroup.position.z += playerRuntime.joystickVector.y * currentSpeed;
+                activeEntities.playerGroup.rotation.y = Math.atan2(-playerRuntime.joystickVector.x, -playerRuntime.joystickVector.y);
             }
 
-            // 2. Enemy AI Chasing
-            if (gameEntities.enemyGroup) {
-                const chaseDir = new THREE.Vector3()
-                    .subVectors(gameEntities.playerGroup.position, gameEntities.enemyGroup.position)
+            // 2. Tướng Địch đuổi theo Ta
+            if (activeEntities.enemyGroup) {
+                const chaseVector = new THREE.Vector3()
+                    .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
                     .normalize();
-                gameEntities.enemyGroup.position.add(chaseDir.multiplyScalar(enemyState.speed));
-                gameEntities.enemyGroup.lookAt(gameEntities.playerGroup.position);
+                activeEntities.enemyGroup.position.add(chaseVector.multiplyScalar(enemyRuntime.chaseSpeed));
+                activeEntities.enemyGroup.lookAt(activeEntities.playerGroup.position);
             }
 
-            // 3. Collision Check: Driving Dragon -> Enemy
-            if (playerState.isDriving) {
-                const distToEnemy = gameEntities.playerGroup.position.distanceTo(gameEntities.enemyGroup.position);
-                if (distToEnemy < 3.2) {
-                    enemyState.hp -= 30; // Trừ 30% HP
+            // 3. Xe Rồng Đâm Địch (Lái xe va chạm)
+            if (playerRuntime.isDrivingDragon) {
+                const crashDist = activeEntities.playerGroup.position.distanceTo(activeEntities.enemyGroup.position);
+                if (crashDist < 3.5) {
+                    enemyRuntime.hp -= 35; // Gây sát thương cực lớn
                     dismountDragonVehicle();
-                    if (enemyState.hp <= 0) {
-                        playerState.deaths++;
-                        resetEnemyPosition();
-                        checkMatchCondition();
+                    if (enemyRuntime.hp <= 0) {
+                        playerRuntime.kills++;
+                        resetEnemyState();
+                        verifyWinLossState();
                     }
                     updateHUDDisplay();
                 }
             }
 
-            // 4. Update Enemy Projectiles
-            for (let i = gameEntities.projectiles.length - 1; i >= 0; i--) {
-                let proj = gameEntities.projectiles[i];
-                proj.mesh.position.add(proj.direction.clone().multiplyScalar(0.35));
-                proj.lifeSpan--;
+            // 4. Xử lý đạn slime Địch
+            for (let i = activeEntities.projectileList.length - 1; i >= 0; i--) {
+                let p = activeEntities.projectileList[i];
+                p.mesh.position.add(p.direction.clone().multiplyScalar(0.38));
+                p.ttl--;
 
-                if (proj.mesh.position.distanceTo(gameEntities.playerGroup.position) < 2.2) {
-                    playerState.hp -= 10;
-                    sceneManager.scene.remove(proj.mesh);
-                    gameEntities.projectiles.splice(i, 1);
-                    if (playerState.hp <= 0) {
-                        enemyState.deaths++;
-                        resetPlayerPosition();
-                        checkMatchCondition();
+                if (p.mesh.position.distanceTo(activeEntities.playerGroup.position) < 2.2) {
+                    playerRuntime.hp -= 12;
+                    coreEngine.scene.remove(p.mesh);
+                    activeEntities.projectileList.splice(i, 1);
+                    if (playerRuntime.hp <= 0) {
+                        playerRuntime.deaths++;
+                        resetPlayerState();
+                        verifyWinLossState();
                     }
                     updateHUDDisplay();
                     continue;
                 }
 
-                if (proj.lifeSpan <= 0) {
-                    sceneManager.scene.remove(proj.mesh);
-                    gameEntities.projectiles.splice(i, 1);
+                if (p.ttl <= 0) {
+                    coreEngine.scene.remove(p.mesh);
+                    activeEntities.projectileList.splice(i, 1);
                 }
             }
 
-            // 5. Minion Battles System
-            for (let i = gameEntities.minions.length - 1; i >= 0; i--) {
-                let m = gameEntities.minions[i];
+            // 5. Lính Giao Tranh
+            for (let i = activeEntities.minionList.length - 1; i >= 0; i--) {
+                let m = activeEntities.minionList[i];
                 if (!m) continue;
 
-                let isFighting = false;
-
-                for (let j = 0; j < gameEntities.minions.length; j++) {
-                    let targetM = gameEntities.minions[j];
-                    if (targetM && m.userData.isEnemy !== targetM.userData.isEnemy) {
-                        if (m.position.distanceTo(targetM.position) < 2.0) {
-                            targetM.userData.hp -= 0.12;
-                            isFighting = true;
-
-                            if (targetM.userData.hp <= 0) {
-                                sceneManager.scene.remove(targetM);
-                                gameEntities.minions.splice(j, 1);
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (!isFighting) {
-                    if (m.userData.isEnemy) {
-                        m.position.z += 0.06;
-                        if (m.position.distanceTo(gameEntities.playerGroup.position) < 1.8) {
-                            playerState.hp -= 0.04;
-                            updateHUDDisplay();
-                        }
-                    } else {
-                        m.position.z -= 0.06;
-                        if (m.position.distanceTo(gameEntities.enemyGroup.position) < 1.8) {
-                            enemyState.hp -= 0.04;
-                            updateHUDDisplay();
-                        }
-                    }
+                if (m.userData.isEnemy) {
+                    m.position.z += 0.05;
+                } else {
+                    m.position.z -= 0.05;
                 }
             }
 
-            // 6. Smooth Third-Person Camera Follow
-            if (gameEntities.playerGroup) {
-                const targetCamPos = new THREE.Vector3(
-                    gameEntities.playerGroup.position.x,
-                    gameEntities.playerGroup.position.y + 22,
-                    gameEntities.playerGroup.position.z + 22
+            // 6. Camera bám theo Tướng Ta
+            if (activeEntities.playerGroup) {
+                const cameraTargetPos = new THREE.Vector3(
+                    activeEntities.playerGroup.position.x,
+                    activeEntities.playerGroup.position.y + 24,
+                    activeEntities.playerGroup.position.z + 24
                 );
-                sceneManager.camera.position.lerp(targetCamPos, 0.1);
-                sceneManager.camera.lookAt(gameEntities.playerGroup.position);
+                coreEngine.camera.position.lerp(cameraTargetPos, 0.1);
+                coreEngine.camera.lookAt(activeEntities.playerGroup.position);
             }
 
-            sceneManager.renderer.render(sceneManager.scene, sceneManager.camera);
+            coreEngine.renderer.render(coreEngine.scene, coreEngine.camera);
         }
 
         // START GAME EVENT
-        document.getElementById('gold-block-btn').addEventListener('click', () => {
-            document.getElementById('menu-overlay').style.display = 'none';
-            document.getElementById('hud-container').style.display = 'block';
-            initEngine();
+        document.getElementById('btn-start-game').addEventListener('click', () => {
+            document.getElementById('main-menu-overlay').style.display = 'none';
+            document.getElementById('hud-layer').style.display = 'block';
+            initialize3DEngine();
         });
     </script>
 </body>
