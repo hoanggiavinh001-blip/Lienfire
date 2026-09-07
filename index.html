@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liên Quân 3D Arena - Preyta Invisible Engine</title>
+    <title>Liên Quân 3D Arena - Preyta Visible Mode</title>
     <style>
         * {
             box-sizing: border-box;
@@ -247,7 +247,7 @@
                 <div class="status-value"><span id="val-player-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-player-hp" class="hp-fill-player"></div></div>
 
-                <div class="status-title" style="margin-top:6px;">Tướng Địch (Preyta - Tàng Hình)</div>
+                <div class="status-title" style="margin-top:6px;">Tướng Địch (Preyta - Hiện Hình)</div>
                 <div class="status-value"><span id="val-enemy-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-enemy-hp" class="hp-fill-enemy"></div></div>
 
@@ -280,7 +280,7 @@
             player: 'bijan_arena_of_valor.glb',
             dragon: 'holy_dragon_arena_of_valor.glb',
             enemy: 'preyta_arena_of_valor.glb',       // Model Địch Preyta
-            enemySkill: 'preyta_arena_of_valor.glb',  // Dịch / Skill Địch dùng Model Preyta
+            enemySkill: 'preyta_arena_of_valor.glb',  // Skill Địch dùng Model Preyta
             menuImage: 'IMG_0511.jpeg'
         };
 
@@ -324,7 +324,7 @@
         let enemyRuntime = {
             hp: 100,
             chaseSpeed: 0.09,
-            isInvisible: true // Trạng thái tàng hình của Địch
+            isInvisible: false // Đã sửa thành false để Preyta hiển thị bình thường
         };
 
         function printDebug(msg) {
@@ -340,7 +340,7 @@
         };
 
         /**
-         * GLTF LOADER TỰ ĐỘNG THỬ LẠI KHI LỖI (CÓ HỖ TRỢ CHẾ ĐỘ TÀNG HÌNH)
+         * GLTF LOADER TỰ ĐỘNG THỬ LẠI KHI LỖI
          */
         function forceLoadGLTFModel(assetPath, targetSize, autoElevateY, makeInvisible, onSuccess) {
             const pathVariants = [
@@ -381,7 +381,7 @@
                             loadedScene.position.y = 0.2;
                         }
 
-                        // Xử lý tàng hình cho Mesh nếu được yêu cầu
+                        // Xử lý hiển thị Mesh (Tắt tàng hình)
                         loadedScene.traverse((node) => {
                             if (node.isMesh) {
                                 node.castShadow = !makeInvisible;
@@ -389,7 +389,10 @@
                                 if (node.material) {
                                     if (makeInvisible) {
                                         node.material.transparent = true;
-                                        node.material.opacity = 0.0; // Tàng hình hoàn toàn
+                                        node.material.opacity = 0.0;
+                                    } else {
+                                        node.material.transparent = false;
+                                        node.material.opacity = 1.0; // Hiển thị rõ nét
                                     }
                                     node.material.depthWrite = true;
                                     node.material.needsUpdate = true;
@@ -461,19 +464,19 @@
             coreEngine.scene.add(activeEntities.playerGroup);
             coreEngine.scene.add(activeEntities.enemyGroup);
 
-            // 1. MAP (5v5_game_map.glb)
+            // 1. MAP
             forceLoadGLTFModel(GAME_ASSETS.map, 115, false, false, (mapModel) => {
                 coreEngine.scene.add(mapModel);
             });
 
-            // 2. TƯỚNG TA BIJAN (bijan_arena_of_valor.glb)
+            // 2. TƯỚNG TA BIJAN
             forceLoadGLTFModel(GAME_ASSETS.player, 3.5, true, false, (playerModel) => {
                 activeEntities.playerModel = playerModel;
                 activeEntities.playerGroup.add(playerModel);
                 resetPlayerState();
             });
 
-            // 3. TƯỚNG ĐỊCH PREYTA (preyta_arena_of_valor.glb) - THIẾT LẬP TÀNG HÌNH
+            // 3. TƯỚNG ĐỊCH PREYTA - TẮT TÀNG HÌNH (enemyRuntime.isInvisible = false)
             forceLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, enemyRuntime.isInvisible, (enemyModel) => {
                 activeEntities.enemyModel = enemyModel;
                 activeEntities.enemyGroup.add(enemyModel);
@@ -534,18 +537,16 @@
         }
 
         /**
-         * ENEMY SKILL / DỊCH CHUYỂN (DÙNG MODEL preyta_arena_of_valor.glb)
+         * ENEMY SKILL / ATTACK ROUTINE
          */
         function enemyAttackRoutine() {
             if (enemyRuntime.hp <= 0) return;
 
-            // Bắn chiêu dạng bóng ma Preyta (Chiêu bắn ra hiện hình mờ để hiển thị hướng tấn công)
             forceLoadGLTFModel(GAME_ASSETS.enemySkill, 2.5, false, false, (preytaSkillModel) => {
-                // Đổi thành hiệu ứng bán trong suốt khi di chuyển
                 preytaSkillModel.traverse((node) => {
                     if (node.isMesh && node.material) {
                         node.material.transparent = true;
-                        node.material.opacity = 0.5;
+                        node.material.opacity = 0.7;
                     }
                 });
                 launchEnemyProjectile(preytaSkillModel);
@@ -569,7 +570,7 @@
         }
 
         /**
-         * PLAYER SKILL - BIJAN LÁI XE RỒNG (holy_dragon_arena_of_valor.glb)
+         * PLAYER SKILL - BIJAN LÁI XE RỒNG
          */
         function executeBijanSkill() {
             if (!playerRuntime.canSkill || playerRuntime.isDrivingDragon) return;
@@ -716,7 +717,7 @@
                 activeEntities.playerGroup.rotation.y = Math.atan2(-playerRuntime.joystickVector.x, -playerRuntime.joystickVector.y);
             }
 
-            // 2. Tướng Địch Tàng Hình vẫn âm thầm di chuyển đuổi theo Ta
+            // 2. Tướng Địch đuổi theo Ta (Đã hiện hình)
             if (activeEntities.enemyGroup) {
                 const chaseVector = new THREE.Vector3()
                     .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
@@ -725,7 +726,7 @@
                 activeEntities.enemyGroup.lookAt(activeEntities.playerGroup.position);
             }
 
-            // 3. Xe Rồng Đâm Địch Tàng Hình
+            // 3. Xe Rồng Đâm Địch
             if (playerRuntime.isDrivingDragon) {
                 const crashDist = activeEntities.playerGroup.position.distanceTo(activeEntities.enemyGroup.position);
                 if (crashDist < 3.5) {
