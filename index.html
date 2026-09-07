@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liên Quân 3D Arena - Full Model Engine v2.0</title>
+    <title>Liên Quân 3D Arena - Full Preyta Model Engine</title>
     <style>
         * {
             box-sizing: border-box;
@@ -279,8 +279,8 @@
             map: '5v5_game_map.glb',
             player: 'bijan_arena_of_valor.glb',
             dragon: 'holy_dragon_arena_of_valor.glb',
-            enemy: 'preyta_arena_of_valor.glb',
-            slime: 'minecraft_slime.glb',
+            enemy: 'preyta_arena_of_valor.glb',       // Model Địch Preyta
+            enemySkill: 'preyta_arena_of_valor.glb',  // Dịch / Skill Địch cũng dùng Model Preyta
             menuImage: 'IMG_0511.jpeg'
         };
 
@@ -339,7 +339,7 @@
         };
 
         /**
-         * ADVANCED GLTF ASSET RETRY LOADER (LOẠI BỎ HOÀN TOÀN KHỐI HỘP CUBE)
+         * GLTF LOADER TỰ ĐỘNG THỬ LẠI KHI LỖI (MÃI MÃI THỬ LẠI BỎ CUBE)
          */
         function forceLoadGLTFModel(assetPath, targetSize, autoElevateY, onSuccess) {
             const pathVariants = [
@@ -353,8 +353,8 @@
 
             function tryFetch() {
                 if (attemptIndex >= pathVariants.length) {
-                    printDebug(`[ĐANG THỬ LẠI] Đang nạp lại file: ${assetPath}...`);
-                    attemptIndex = 0; // Tiếp tục thử lại không dừng cho đến khi tải được
+                    printDebug(`[ĐANG THỬ LẠI] Tải lại file: ${assetPath}...`);
+                    attemptIndex = 0;
                     setTimeout(tryFetch, 1000);
                     return;
                 }
@@ -367,7 +367,6 @@
                     (gltf) => {
                         const loadedScene = gltf.scene;
 
-                        // Tự động tính toán Bounding Box chuẩn xác
                         const box = new THREE.Box3().setFromObject(loadedScene);
                         const size = box.getSize(new THREE.Vector3());
                         const maxDim = Math.max(size.x, size.y, size.z);
@@ -377,12 +376,10 @@
                             loadedScene.scale.set(scaleFactor, scaleFactor, scaleFactor);
                         }
 
-                        // Điều chỉnh tọa độ Y nâng cao tránh bị chìm dưới Map
                         if (autoElevateY) {
                             loadedScene.position.y = 0.2;
                         }
 
-                        // Traverse Materials & Enable Shadowing
                         loadedScene.traverse((node) => {
                             if (node.isMesh) {
                                 node.castShadow = true;
@@ -394,7 +391,6 @@
                             }
                         });
 
-                        // Play Animation nếu có
                         if (gltf.animations && gltf.animations.length > 0) {
                             const mixer = new THREE.AnimationMixer(loadedScene);
                             const action = mixer.clipAction(gltf.animations[0]);
@@ -532,13 +528,14 @@
         }
 
         /**
-         * ENEMY SKILL (minecraft_slime.glb)
+         * ENEMY SKILL / DỊCH CHUYỂN (DÙNG MODEL preyta_arena_of_valor.glb)
          */
         function enemyAttackRoutine() {
             if (enemyRuntime.hp <= 0) return;
 
-            forceLoadGLTFModel(GAME_ASSETS.slime, 1.8, false, (slimeModel) => {
-                launchEnemyProjectile(slimeModel);
+            // Nạp Model Skill / Bóng ma Preyta
+            forceLoadGLTFModel(GAME_ASSETS.enemySkill, 2.5, false, (preytaSkillModel) => {
+                launchEnemyProjectile(preytaSkillModel);
             });
         }
 
@@ -570,13 +567,11 @@
             const btnSkill = document.getElementById('btn-skill');
             btnSkill.classList.add('btn-cooldown');
 
-            // Nạp Model Xe Rồng
             forceLoadGLTFModel(GAME_ASSETS.dragon, 4.8, false, (dragonModel) => {
                 activeEntities.dragonVehicleModel = dragonModel;
                 mountDragonVehicle();
             });
 
-            // Cooldown Timer
             setTimeout(() => {
                 playerRuntime.canSkill = true;
                 btnSkill.classList.remove('btn-cooldown');
@@ -697,7 +692,6 @@
 
             const delta = coreEngine.clock.getDelta();
 
-            // Cập nhật Animation
             coreEngine.mixers.forEach(m => m.update(delta));
 
             const currentSpeed = playerRuntime.isDrivingDragon ? playerRuntime.moveSpeed * 1.9 : playerRuntime.moveSpeed;
@@ -709,7 +703,7 @@
                 activeEntities.playerGroup.rotation.y = Math.atan2(-playerRuntime.joystickVector.x, -playerRuntime.joystickVector.y);
             }
 
-            // 2. Tướng Địch đuổi theo Ta
+            // 2. Tướng Địch Preyta đuổi theo Ta
             if (activeEntities.enemyGroup) {
                 const chaseVector = new THREE.Vector3()
                     .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
@@ -718,11 +712,11 @@
                 activeEntities.enemyGroup.lookAt(activeEntities.playerGroup.position);
             }
 
-            // 3. Xe Rồng Đâm Địch (Lái xe va chạm)
+            // 3. Xe Rồng Đâm Địch
             if (playerRuntime.isDrivingDragon) {
                 const crashDist = activeEntities.playerGroup.position.distanceTo(activeEntities.enemyGroup.position);
                 if (crashDist < 3.5) {
-                    enemyRuntime.hp -= 35; // Gây sát thương cực lớn
+                    enemyRuntime.hp -= 35;
                     dismountDragonVehicle();
                     if (enemyRuntime.hp <= 0) {
                         playerRuntime.kills++;
@@ -733,7 +727,7 @@
                 }
             }
 
-            // 4. Xử lý đạn slime Địch
+            // 4. Xử lý Skill Preyta (Địch bắn ra)
             for (let i = activeEntities.projectileList.length - 1; i >= 0; i--) {
                 let p = activeEntities.projectileList[i];
                 p.mesh.position.add(p.direction.clone().multiplyScalar(0.38));
