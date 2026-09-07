@@ -98,6 +98,7 @@
             align-items: center;
             font-size: 14px;
             touch-action: manipulation;
+            cursor: pointer;
         }
         #btn-attack { background: rgba(220, 53, 69, 0.8); }
         #btn-skill { background: rgba(40, 167, 69, 0.8); }
@@ -141,11 +142,12 @@
 
         // Game State Variables
         let scene, camera, renderer, gltfLoader;
-        let player, enemy, mapModel;
+        let playerGroup, enemyGroup;
+        let playerModel, enemyModel;
         let playerHp = 100, enemyHp = 100;
         let playerDeaths = 0, enemyDeaths = 0;
         let isSkillActive = false, skillCooldown = false;
-        let dragonVehicle = null;
+        let dragonModel = null;
         let minions = [];
         let enemyProjectiles = [];
 
@@ -155,7 +157,6 @@
         const enemyBasePos = new THREE.Vector3(0, 0, -40);
 
         function initGame() {
-            // Setup Three.js Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
 
@@ -165,18 +166,23 @@
             document.body.appendChild(renderer.domElement);
 
             // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(20, 50, 20);
             scene.add(dirLight);
 
             gltfLoader = new THREE.GLTFLoader();
 
+            // Groups làm gốc tọa độ cho Tướng
+            playerGroup = new THREE.Group();
+            enemyGroup = new THREE.Group();
+            scene.add(playerGroup);
+            scene.add(enemyGroup);
+
             // 1. Load Map (5v5_game_map.glb)
             gltfLoader.load('5v5_game_map.glb', (gltf) => {
-                mapModel = gltf.scene;
-                scene.add(mapModel);
+                scene.add(gltf.scene);
             }, undefined, () => {
                 // Fallback Map: Mặt đất + Trụ
                 const ground = new THREE.Mesh(new THREE.BoxGeometry(100, 1, 100), new THREE.MeshLambertMaterial({ color: 0x3b7a57 }));
@@ -187,27 +193,27 @@
 
             // 2. Load Player (bijan_arena_of_valor.glb)
             gltfLoader.load('bijan_arena_of_valor.glb', (gltf) => {
-                player = gltf.scene;
-                player.scale.set(1.5, 1.5, 1.5);
-                scene.add(player);
+                playerModel = gltf.scene;
+                playerModel.scale.set(1.5, 1.5, 1.5);
+                playerGroup.add(playerModel);
                 respawnPlayer();
             }, undefined, () => {
                 // Fallback Player (Khối vàng 3D)
-                player = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
-                scene.add(player);
+                playerModel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
+                playerGroup.add(playerModel);
                 respawnPlayer();
             });
 
             // 3. Load Enemy (preyta_arena_of_valor.glb)
             gltfLoader.load('preyta_arena_of_valor.glb', (gltf) => {
-                enemy = gltf.scene;
-                enemy.scale.set(1.5, 1.5, 1.5);
-                scene.add(enemy);
+                enemyModel = gltf.scene;
+                enemyModel.scale.set(1.5, 1.5, 1.5);
+                enemyGroup.add(enemyModel);
                 respawnEnemy();
             }, undefined, () => {
                 // Fallback Enemy (Khối đỏ 3D)
-                enemy = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-                scene.add(enemy);
+                enemyModel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xff0000 }));
+                enemyGroup.add(enemyModel);
                 respawnEnemy();
             });
 
@@ -221,7 +227,6 @@
         }
 
         function createTurrets() {
-            // Tạo 3 đường có trụ
             const paths = [-20, 0, 20];
             paths.forEach(x => {
                 // Trụ phe ta (Xanh)
@@ -237,18 +242,18 @@
         }
 
         function respawnPlayer() {
-            if (player) player.position.copy(mainBasePos);
+            playerGroup.position.copy(mainBasePos);
             playerHp = 100;
             updateHUD();
         }
 
         function respawnEnemy() {
-            if (enemy) enemy.position.copy(enemyBasePos);
+            enemyGroup.position.copy(enemyBasePos);
             enemyHp = 100;
             updateHUD();
         }
 
-        // Lính Spawn
+        // Spawn Lính 2 phe
         function spawnMinions() {
             for (let i = 0; i < 5; i++) {
                 // Lính Ta (Màu Xanh)
@@ -269,10 +274,12 @@
 
         // Địch Phun Chiêu (minecraft_slime.glb)
         function enemyAttackLogic() {
-            if (!enemy || enemyHp <= 0 || !player) return;
+            if (enemyHp <= 0) return;
 
             gltfLoader.load('minecraft_slime.glb', (gltf) => {
-                createProjectile(gltf.scene);
+                const slime = gltf.scene;
+                slime.scale.set(0.8, 0.8, 0.8);
+                createProjectile(slime);
             }, undefined, () => {
                 // Fallback Chiêu
                 const proj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x00ff00 }));
@@ -281,13 +288,13 @@
         }
 
         function createProjectile(proj) {
-            proj.position.copy(enemy.position);
+            proj.position.copy(enemyGroup.position);
             scene.add(proj);
-            const dir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-            enemyProjectiles.push({ mesh: proj, dir: dir, life: 100 });
+            const dir = new THREE.Vector3().subVectors(playerGroup.position, enemyGroup.position).normalize();
+            enemyProjectiles.push({ mesh: proj, dir: dir, life: 120 });
         }
 
-        // Chiêu cưỡi Rồng của Bijan (holy_dragon_arena_of_valor.glb)
+        // Chiêu cưỡi Rồng/Xe Bijan (holy_dragon_arena_of_valor.glb)
         function activateBijanSkill() {
             if (skillCooldown || isSkillActive) return;
             isSkillActive = true;
@@ -297,11 +304,12 @@
             btnSkill.classList.add('cooldown');
 
             gltfLoader.load('holy_dragon_arena_of_valor.glb', (gltf) => {
-                dragonVehicle = gltf.scene;
+                dragonModel = gltf.scene;
+                dragonModel.scale.set(1.5, 1.5, 1.5);
                 mountDragon();
             }, undefined, () => {
                 // Fallback Khối to
-                dragonVehicle = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 4), new THREE.MeshLambertMaterial({ color: 0xffff00 }));
+                dragonModel = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 4), new THREE.MeshLambertMaterial({ color: 0xffff00 }));
                 mountDragon();
             });
 
@@ -312,25 +320,23 @@
         }
 
         function mountDragon() {
-            dragonVehicle.position.copy(player.position);
-            scene.add(dragonVehicle);
-            player.position.y += 1.5; // Nhân vật đứng lên trên
+            playerGroup.add(dragonModel);
+            if (playerModel) playerModel.position.y = 1.5; // Đứng lên rồng/xe
         }
 
         function dismantleDragon() {
             if (!isSkillActive) return;
             isSkillActive = false;
-            if (dragonVehicle) {
-                scene.remove(dragonVehicle);
-                dragonVehicle = null;
+            if (dragonModel) {
+                playerGroup.remove(dragonModel);
+                dragonModel = null;
             }
-            if (player) player.position.y = 0;
+            if (playerModel) playerModel.position.y = 0;
         }
 
         // Đánh thường (Đánh gần)
         function performAttack() {
-            if (!player || !enemy) return;
-            if (player.position.distanceTo(enemy.position) < 4) {
+            if (playerGroup.position.distanceTo(enemyGroup.position) < 4) {
                 enemyHp -= 10;
                 if (enemyHp <= 0) {
                     enemyDeaths++;
@@ -394,41 +400,34 @@
                 moveVec = { x: 0, y: 0 };
             });
 
-            // Button Click Handler
             document.getElementById('btn-attack').addEventListener('click', performAttack);
             document.getElementById('btn-skill').addEventListener('click', activateBijanSkill);
         }
 
-        // Loop Game
+        // Loop Game Main
         function animate() {
             requestAnimationFrame(animate);
 
-            const speed = isSkillActive ? 0.4 : 0.2; // Chiêu xe chạy nhanh hơn
+            const speed = isSkillActive ? 0.4 : 0.2;
 
-            // Di chuyển Player
-            if (player && (moveVec.x !== 0 || moveVec.y !== 0)) {
-                player.position.x += moveVec.x * speed;
-                player.position.z += moveVec.y * speed;
-                player.rotation.y = Math.atan2(-moveVec.x, -moveVec.y);
-
-                if (isSkillActive && dragonVehicle) {
-                    dragonVehicle.position.copy(player.position);
-                    dragonVehicle.position.y = 0;
-                    dragonVehicle.rotation.y = player.rotation.y;
-                }
+            // Di chuyển Tướng Ta
+            if (moveVec.x !== 0 || moveVec.y !== 0) {
+                playerGroup.position.x += moveVec.x * speed;
+                playerGroup.position.z += moveVec.y * speed;
+                playerGroup.rotation.y = Math.atan2(-moveVec.x, -moveVec.y);
             }
 
-            // Tướng địch đuổi theo Player
-            if (enemy && player) {
-                const dirToPlayer = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-                enemy.position.add(dirToPlayer.multiplyScalar(0.08));
-                enemy.lookAt(player.position);
+            // Tướng Địch đuổi theo Tướng Ta
+            if (enemyGroup) {
+                const dirToPlayer = new THREE.Vector3().subVectors(playerGroup.position, enemyGroup.position).normalize();
+                enemyGroup.position.add(dirToPlayer.multiplyScalar(0.08));
+                enemyGroup.lookAt(playerGroup.position);
             }
 
-            // Xử lý đâm chiêu Bijan vào địch
-            if (isSkillActive && player && enemy) {
-                if (player.position.distanceTo(enemy.position) < 3) {
-                    enemyHp -= 30; // Trừ 30% HP
+            // Chiêu Bijan tông Địch
+            if (isSkillActive) {
+                if (playerGroup.position.distanceTo(enemyGroup.position) < 3) {
+                    enemyHp -= 30; // Trừ 30% máu
                     dismantleDragon();
                     if (enemyHp <= 0) {
                         enemyDeaths++;
@@ -439,14 +438,13 @@
                 }
             }
 
-            // Update đạn của Địch
+            // Xử lý đạn Địch (Slime)
             for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
                 let p = enemyProjectiles[i];
                 p.mesh.position.add(p.dir.clone().multiplyScalar(0.3));
                 p.life--;
 
-                // Trúng người chơi
-                if (player && p.mesh.position.distanceTo(player.position) < 2) {
+                if (p.mesh.position.distanceTo(playerGroup.position) < 2) {
                     playerHp -= 10;
                     scene.remove(p.mesh);
                     enemyProjectiles.splice(i, 1);
@@ -465,26 +463,51 @@
                 }
             }
 
-            // Update Lính di chuyển & Đánh nhau
-            minions.forEach(m => {
-                if (m.userData.isEnemy) {
-                    m.position.z += 0.05; // Lính địch đi xuống
-                } else {
-                    m.position.z -= 0.05; // Lính ta đi lên
+            // Xử lý Lính 2 bên đánh lẫn nhau và tấn công Tướng
+            for (let i = minions.length - 1; i >= 0; i--) {
+                let m = minions[i];
+                if (!m) continue;
+
+                let isEngaged = false;
+
+                // Lính đánh Lính khác phe
+                for (let j = 0; j < minions.length; j++) {
+                    let target = minions[j];
+                    if (target && m.userData.isEnemy !== target.userData.isEnemy) {
+                        if (m.position.distanceTo(target.position) < 2) {
+                            target.userData.hp -= 0.1; // Gây sát thương liên tục
+                            isEngaged = true;
+
+                            if (target.userData.hp <= 0) {
+                                scene.remove(target);
+                                minions.splice(j, 1);
+                            }
+                            break;
+                        }
+                    }
                 }
 
-                // Lính đánh tướng
-                if (m.userData.isEnemy && player && m.position.distanceTo(player.position) < 1.5) {
-                    playerHp -= 0.05; // Gây 1 dmg
-                    updateHUD();
+                // Nếu lính chưa chạm mặt lính địch thì di chuyển tiếp
+                if (!isEngaged) {
+                    if (m.userData.isEnemy) {
+                        m.position.z += 0.05; // Lính địch đi xuống
+                        if (m.position.distanceTo(playerGroup.position) < 1.5) {
+                            playerHp -= 0.05;
+                            updateHUD();
+                        }
+                    } else {
+                        m.position.z -= 0.05; // Lính ta đi lên
+                        if (m.position.distanceTo(enemyGroup.position) < 1.5) {
+                            enemyHp -= 0.05;
+                            updateHUD();
+                        }
+                    }
                 }
-            });
+            }
 
             // Camera đi theo Player
-            if (player) {
-                camera.position.set(player.position.x, player.position.y + 20, player.position.z + 20);
-                camera.lookAt(player.position);
-            }
+            camera.position.set(playerGroup.position.x, playerGroup.position.y + 20, playerGroup.position.z + 20);
+            camera.lookAt(playerGroup.position);
 
             renderer.render(scene, camera);
         }
