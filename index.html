@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liên Quân 3D Arena - Red Cube Enemy Mode</title>
+    <title>Liên Quân 3D Arena - Raz Enemy Mode</title>
     <style>
         * {
             box-sizing: border-box;
@@ -247,7 +247,7 @@
                 <div class="status-value"><span id="val-player-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-player-hp" class="hp-fill-player"></div></div>
 
-                <div class="status-title" style="margin-top:6px;">Tướng Địch (Red Cube / Preyta)</div>
+                <div class="status-title" style="margin-top:6px;">Tướng Địch (Red Cube / Raz)</div>
                 <div class="status-value"><span id="val-enemy-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-enemy-hp" class="hp-fill-enemy"></div></div>
 
@@ -279,8 +279,8 @@
             map: '5v5_game_map.glb',
             player: 'bijan_arena_of_valor.glb',
             dragon: 'holy_dragon_arena_of_valor.glb',
-            enemy: 'preyta_arena_of_valor.glb',       // Model Tướng Địch Preyta
-            enemySkill: 'minecraft_slime.glb',        // Model Chiêu Địch Minecraft Slime
+            enemy: 'raz_super_striker_arena_of_valor.glb', // Model Tướng Địch Raz Siêu Cấp Lôi Đài
+            enemySkill: 'minecraft_slime.glb',               // Model Chiêu Địch Minecraft Slime
             menuImage: 'IMG_0511.jpeg'
         };
 
@@ -305,7 +305,7 @@
             playerGroup: null,
             enemyGroup: null,
             playerModel: null,
-            enemyModel: null, // Khối đỏ mặc định hoặc Preyta Model
+            enemyModel: null, // Khối đỏ mặc định hoặc Raz Model
             slimeSkillModelTemplate: null, // Cache model Slime nếu nạp thành công
             dragonVehicleModel: null,
             minionList: [],
@@ -340,7 +340,7 @@
         };
 
         /**
-         * HÀM NẠP GLTF MODEL TỰ ĐỘNG CÓ CẢNH BÁO
+         * HÀM NẠP GLTF MODEL TỰ ĐỘNG
          */
         function tryLoadGLTFModel(assetPath, targetSize, autoElevateY, onSuccess, onError) {
             coreEngine.loader.load(
@@ -434,15 +434,14 @@
                 resetPlayerState();
             });
 
-            // 3. TƯỚNG ĐỊCH: Mặc định là KHỐI MÀU ĐỎ. Nếu tìm thấy preyta_arena_of_valor.glb sẽ tự động thay thế.
+            // 3. TƯỚNG ĐỊCH: Mặc định là KHỐI MÀU ĐỎ. Nếu tìm thấy raz_super_striker_arena_of_valor.glb sẽ chuyển sang Model Raz.
             createDefaultRedCubeEnemy();
-            tryLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, (preytaModel) => {
-                // Nếu nạp thành công Preyta, loại bỏ khối đỏ và thêm Model Preyta
+            tryLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, (razModel) => {
                 if (activeEntities.enemyModel) {
                     activeEntities.enemyGroup.remove(activeEntities.enemyModel);
                 }
-                activeEntities.enemyModel = preytaModel;
-                activeEntities.enemyGroup.add(preytaModel);
+                activeEntities.enemyModel = razModel;
+                activeEntities.enemyGroup.add(razModel);
             });
 
             // 4. KIỂM TRA MODEL SLIME SẴN CÓ CHO CHIÊU ĐỊCH
@@ -735,7 +734,7 @@
                 p.ttl--;
 
                 if (p.mesh.position.distanceTo(activeEntities.playerGroup.position) < 2.2) {
-                    playerRuntime.hp -= 10; // Trừ đúng 10 máu
+                    playerRuntime.hp -= 10;
                     coreEngine.scene.remove(p.mesh);
                     activeEntities.projectileList.splice(i, 1);
                     if (playerRuntime.hp <= 0) {
