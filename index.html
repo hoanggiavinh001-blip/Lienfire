@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liên Quân 3D Arena - Preyta Visible Mode</title>
+    <title>Liên Quân 3D Arena - Red Cube Enemy Mode</title>
     <style>
         * {
             box-sizing: border-box;
@@ -247,7 +247,7 @@
                 <div class="status-value"><span id="val-player-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-player-hp" class="hp-fill-player"></div></div>
 
-                <div class="status-title" style="margin-top:6px;">Tướng Địch (Preyta - Hiện Hình)</div>
+                <div class="status-title" style="margin-top:6px;">Tướng Địch (Red Cube / Preyta)</div>
                 <div class="status-value"><span id="val-enemy-hp">100</span>/100</div>
                 <div class="hp-bar-track"><div id="bar-enemy-hp" class="hp-fill-enemy"></div></div>
 
@@ -279,8 +279,8 @@
             map: '5v5_game_map.glb',
             player: 'bijan_arena_of_valor.glb',
             dragon: 'holy_dragon_arena_of_valor.glb',
-            enemy: 'preyta_arena_of_valor.glb',       // Model Địch Preyta
-            enemySkill: 'preyta_arena_of_valor.glb',  // Skill Địch dùng Model Preyta
+            enemy: 'preyta_arena_of_valor.glb',       // Model Tướng Địch Preyta
+            enemySkill: 'minecraft_slime.glb',        // Model Chiêu Địch Minecraft Slime
             menuImage: 'IMG_0511.jpeg'
         };
 
@@ -305,7 +305,8 @@
             playerGroup: null,
             enemyGroup: null,
             playerModel: null,
-            enemyModel: null,
+            enemyModel: null, // Khối đỏ mặc định hoặc Preyta Model
+            slimeSkillModelTemplate: null, // Cache model Slime nếu nạp thành công
             dragonVehicleModel: null,
             minionList: [],
             projectileList: []
@@ -323,8 +324,7 @@
 
         let enemyRuntime = {
             hp: 100,
-            chaseSpeed: 0.09,
-            isInvisible: false // Đã sửa thành false để Preyta hiển thị bình thường
+            chaseSpeed: 0.09
         };
 
         function printDebug(msg) {
@@ -340,88 +340,53 @@
         };
 
         /**
-         * GLTF LOADER TỰ ĐỘNG THỬ LẠI KHI LỖI
+         * HÀM NẠP GLTF MODEL TỰ ĐỘNG CÓ CẢNH BÁO
          */
-        function forceLoadGLTFModel(assetPath, targetSize, autoElevateY, makeInvisible, onSuccess) {
-            const pathVariants = [
+        function tryLoadGLTFModel(assetPath, targetSize, autoElevateY, onSuccess, onError) {
+            coreEngine.loader.load(
                 assetPath,
-                './' + assetPath,
-                './' + assetPath.toLowerCase(),
-                './' + assetPath.toUpperCase()
-            ];
+                (gltf) => {
+                    const loadedScene = gltf.scene;
 
-            let attemptIndex = 0;
+                    const box = new THREE.Box3().setFromObject(loadedScene);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
 
-            function tryFetch() {
-                if (attemptIndex >= pathVariants.length) {
-                    printDebug(`[ĐANG THỬ LẠI] Tải lại file: ${assetPath}...`);
-                    attemptIndex = 0;
-                    setTimeout(tryFetch, 1000);
-                    return;
-                }
-
-                const currentPath = pathVariants[attemptIndex];
-                attemptIndex++;
-
-                coreEngine.loader.load(
-                    currentPath,
-                    (gltf) => {
-                        const loadedScene = gltf.scene;
-
-                        const box = new THREE.Box3().setFromObject(loadedScene);
-                        const size = box.getSize(new THREE.Vector3());
-                        const maxDim = Math.max(size.x, size.y, size.z);
-
-                        if (maxDim > 0) {
-                            const scaleFactor = targetSize / maxDim;
-                            loadedScene.scale.set(scaleFactor, scaleFactor, scaleFactor);
-                        }
-
-                        if (autoElevateY) {
-                            loadedScene.position.y = 0.2;
-                        }
-
-                        // Xử lý hiển thị Mesh (Tắt tàng hình)
-                        loadedScene.traverse((node) => {
-                            if (node.isMesh) {
-                                node.castShadow = !makeInvisible;
-                                node.receiveShadow = !makeInvisible;
-                                if (node.material) {
-                                    if (makeInvisible) {
-                                        node.material.transparent = true;
-                                        node.material.opacity = 0.0;
-                                    } else {
-                                        node.material.transparent = false;
-                                        node.material.opacity = 1.0; // Hiển thị rõ nét
-                                    }
-                                    node.material.depthWrite = true;
-                                    node.material.needsUpdate = true;
-                                }
-                            }
-                        });
-
-                        if (gltf.animations && gltf.animations.length > 0) {
-                            const mixer = new THREE.AnimationMixer(loadedScene);
-                            const action = mixer.clipAction(gltf.animations[0]);
-                            action.play();
-                            coreEngine.mixers.push(mixer);
-                        }
-
-                        printDebug(`Đã nạp Model 3D thành công: ${assetPath}`);
-                        if (onSuccess) onSuccess(loadedScene);
-                    },
-                    undefined,
-                    (error) => {
-                        tryFetch();
+                    if (maxDim > 0) {
+                        const scaleFactor = targetSize / maxDim;
+                        loadedScene.scale.set(scaleFactor, scaleFactor, scaleFactor);
                     }
-                );
-            }
 
-            tryFetch();
+                    if (autoElevateY) {
+                        loadedScene.position.y = 0.2;
+                    }
+
+                    loadedScene.traverse((node) => {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = true;
+                        }
+                    });
+
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        const mixer = new THREE.AnimationMixer(loadedScene);
+                        const action = mixer.clipAction(gltf.animations[0]);
+                        action.play();
+                        coreEngine.mixers.push(mixer);
+                    }
+
+                    printDebug(`Đã nạp thành công Model: ${assetPath}`);
+                    if (onSuccess) onSuccess(loadedScene);
+                },
+                undefined,
+                (err) => {
+                    if (onError) onError(err);
+                }
+            );
         }
 
         /**
-         * THREE.JS ENGINE INITIALIZATION
+         * INITIALIZATION
          */
         function initialize3DEngine() {
             const canvasElem = document.getElementById('render-canvas');
@@ -449,13 +414,6 @@
             sunLight.castShadow = true;
             sunLight.shadow.mapSize.width = 2048;
             sunLight.shadow.mapSize.height = 2048;
-            sunLight.shadow.camera.near = 0.5;
-            sunLight.shadow.camera.far = 300;
-            const shadowRange = 70;
-            sunLight.shadow.camera.left = -shadowRange;
-            sunLight.shadow.camera.right = shadowRange;
-            sunLight.shadow.camera.top = shadowRange;
-            sunLight.shadow.camera.bottom = -shadowRange;
             coreEngine.scene.add(sunLight);
 
             // Container Groups
@@ -465,26 +423,35 @@
             coreEngine.scene.add(activeEntities.enemyGroup);
 
             // 1. MAP
-            forceLoadGLTFModel(GAME_ASSETS.map, 115, false, false, (mapModel) => {
+            tryLoadGLTFModel(GAME_ASSETS.map, 115, false, (mapModel) => {
                 coreEngine.scene.add(mapModel);
             });
 
             // 2. TƯỚNG TA BIJAN
-            forceLoadGLTFModel(GAME_ASSETS.player, 3.5, true, false, (playerModel) => {
+            tryLoadGLTFModel(GAME_ASSETS.player, 3.5, true, (playerModel) => {
                 activeEntities.playerModel = playerModel;
                 activeEntities.playerGroup.add(playerModel);
                 resetPlayerState();
             });
 
-            // 3. TƯỚNG ĐỊCH PREYTA - TẮT TÀNG HÌNH (enemyRuntime.isInvisible = false)
-            forceLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, enemyRuntime.isInvisible, (enemyModel) => {
-                activeEntities.enemyModel = enemyModel;
-                activeEntities.enemyGroup.add(enemyModel);
-                resetEnemyState();
+            // 3. TƯỚNG ĐỊCH: Mặc định là KHỐI MÀU ĐỎ. Nếu tìm thấy preyta_arena_of_valor.glb sẽ tự động thay thế.
+            createDefaultRedCubeEnemy();
+            tryLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, (preytaModel) => {
+                // Nếu nạp thành công Preyta, loại bỏ khối đỏ và thêm Model Preyta
+                if (activeEntities.enemyModel) {
+                    activeEntities.enemyGroup.remove(activeEntities.enemyModel);
+                }
+                activeEntities.enemyModel = preytaModel;
+                activeEntities.enemyGroup.add(preytaModel);
             });
 
-            // Timers & Spawners
-            setInterval(enemyAttackRoutine, 4500);
+            // 4. KIỂM TRA MODEL SLIME SẴN CÓ CHO CHIÊU ĐỊCH
+            tryLoadGLTFModel(GAME_ASSETS.enemySkill, 1.8, false, (slimeModel) => {
+                activeEntities.slimeSkillModelTemplate = slimeModel;
+            });
+
+            // Timers & Spawners: Địch nhả chiêu sau MỖI 0.5 GIÂY (500ms)
+            setInterval(enemyAttackRoutine, 500);
             setInterval(spawnMinionWave, 16000);
             spawnMinionWave();
 
@@ -493,6 +460,21 @@
 
             // Loop Render
             gameMainLoop();
+        }
+
+        /**
+         * TẠO KHỐI MÀU ĐỎ CHO ĐỊCH (MẶC ĐỊNH)
+         */
+        function createDefaultRedCubeEnemy() {
+            const cubeGeo = new THREE.BoxGeometry(2, 3, 2);
+            const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 });
+            const redCubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
+            redCubeMesh.position.y = 1.5;
+            redCubeMesh.castShadow = true;
+            
+            activeEntities.enemyModel = redCubeMesh;
+            activeEntities.enemyGroup.add(redCubeMesh);
+            resetEnemyState();
         }
 
         function resetPlayerState() {
@@ -537,35 +519,40 @@
         }
 
         /**
-         * ENEMY SKILL / ATTACK ROUTINE
+         * ĐỊCH BẮN CHIÊU MỖI 0.5 GIÂY:
+         * - Mặc định nhả ra CỤC MÀU CAM (Orange Sphere) gây 10 máu.
+         * - Nếu có minecraft_slime.glb thì nhả ra MODEL SLIME.
          */
         function enemyAttackRoutine() {
             if (enemyRuntime.hp <= 0) return;
 
-            forceLoadGLTFModel(GAME_ASSETS.enemySkill, 2.5, false, false, (preytaSkillModel) => {
-                preytaSkillModel.traverse((node) => {
-                    if (node.isMesh && node.material) {
-                        node.material.transparent = true;
-                        node.material.opacity = 0.7;
-                    }
-                });
-                launchEnemyProjectile(preytaSkillModel);
-            });
+            let skillMesh;
+            if (activeEntities.slimeSkillModelTemplate) {
+                // Sử dụng Clone của Model Slime
+                skillMesh = activeEntities.slimeSkillModelTemplate.clone();
+            } else {
+                // Tạo Cục Màu Cam mặc định
+                const orangeGeo = new THREE.SphereGeometry(0.8, 16, 16);
+                const orangeMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.2 });
+                skillMesh = new THREE.Mesh(orangeGeo, orangeMat);
+            }
+
+            launchEnemyProjectile(skillMesh);
         }
 
-        function launchEnemyProjectile(projModel) {
-            projModel.position.copy(activeEntities.enemyGroup.position);
-            projModel.position.y = 1.2;
-            coreEngine.scene.add(projModel);
+        function launchEnemyProjectile(projMesh) {
+            projMesh.position.copy(activeEntities.enemyGroup.position);
+            projMesh.position.y = 1.2;
+            coreEngine.scene.add(projMesh);
 
             const flightDir = new THREE.Vector3()
                 .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
                 .normalize();
 
             activeEntities.projectileList.push({
-                mesh: projModel,
+                mesh: projMesh,
                 direction: flightDir,
-                ttl: 140
+                ttl: 120 // Thời gian tồn tại của viên đạn
             });
         }
 
@@ -581,7 +568,7 @@
             const btnSkill = document.getElementById('btn-skill');
             btnSkill.classList.add('btn-cooldown');
 
-            forceLoadGLTFModel(GAME_ASSETS.dragon, 4.8, false, false, (dragonModel) => {
+            tryLoadGLTFModel(GAME_ASSETS.dragon, 4.8, false, (dragonModel) => {
                 activeEntities.dragonVehicleModel = dragonModel;
                 mountDragonVehicle();
             });
@@ -717,7 +704,7 @@
                 activeEntities.playerGroup.rotation.y = Math.atan2(-playerRuntime.joystickVector.x, -playerRuntime.joystickVector.y);
             }
 
-            // 2. Tướng Địch đuổi theo Ta (Đã hiện hình)
+            // 2. Tướng Địch đuổi theo Ta
             if (activeEntities.enemyGroup) {
                 const chaseVector = new THREE.Vector3()
                     .subVectors(activeEntities.playerGroup.position, activeEntities.enemyGroup.position)
@@ -741,14 +728,14 @@
                 }
             }
 
-            // 4. Xử lý Skill Preyta
+            // 4. Xử lý Cục Cam / Slime Bắn ra (Gây 10 máu)
             for (let i = activeEntities.projectileList.length - 1; i >= 0; i--) {
                 let p = activeEntities.projectileList[i];
-                p.mesh.position.add(p.direction.clone().multiplyScalar(0.38));
+                p.mesh.position.add(p.direction.clone().multiplyScalar(0.42));
                 p.ttl--;
 
                 if (p.mesh.position.distanceTo(activeEntities.playerGroup.position) < 2.2) {
-                    playerRuntime.hp -= 12;
+                    playerRuntime.hp -= 10; // Trừ đúng 10 máu
                     coreEngine.scene.remove(p.mesh);
                     activeEntities.projectileList.splice(i, 1);
                     if (playerRuntime.hp <= 0) {
