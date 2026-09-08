@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liên Quân 3D Arena - Raz Enemy Mode</title>
+    <title>Liên Quân 3D Arena - Custom Minion Sprites</title>
     <style>
         * {
             box-sizing: border-box;
@@ -268,7 +268,7 @@
             </div>
         </div>
 
-        <div id="console-debug-box">Khởi tạo hệ thống Model 3D...</div>
+        <div id="console-debug-box">Khởi tạo hệ thống Game...</div>
     </div>
 
     <script>
@@ -279,9 +279,11 @@
             map: '5v5_game_map.glb',
             player: 'bijan_arena_of_valor.glb',
             dragon: 'holy_dragon_arena_of_valor.glb',
-            enemy: 'raz_super_striker_arena_of_valor.glb', // Model Tướng Địch Raz Siêu Cấp Lôi Đài
-            enemySkill: 'minecraft_slime.glb',               // Model Chiêu Địch Minecraft Slime
-            menuImage: 'IMG_0511.jpeg'
+            enemy: 'raz_super_striker_arena_of_valor.glb',
+            enemySkill: 'minecraft_slime.glb',
+            menuImage: 'IMG_0511.jpeg',
+            blueMinionImg: 'IMG_0510.jpeg',  // Ảnh Lính Ta
+            redMinionImg: 'IMG_0519.jpeg'    // Ảnh Lính Địch
         };
 
         const WORLD_SETTINGS = {
@@ -297,6 +299,7 @@
             camera: null,
             renderer: null,
             loader: null,
+            textureLoader: null,
             clock: new THREE.Clock(),
             mixers: []
         };
@@ -305,11 +308,16 @@
             playerGroup: null,
             enemyGroup: null,
             playerModel: null,
-            enemyModel: null, // Khối đỏ mặc định hoặc Raz Model
-            slimeSkillModelTemplate: null, // Cache model Slime nếu nạp thành công
+            enemyModel: null,
+            slimeSkillModelTemplate: null,
             dragonVehicleModel: null,
             minionList: [],
             projectileList: []
+        };
+
+        let loadedTextures = {
+            blueMinion: null,
+            redMinion: null
         };
 
         let playerRuntime = {
@@ -404,6 +412,18 @@
             coreEngine.renderer.outputEncoding = THREE.sRGBEncoding;
 
             coreEngine.loader = new THREE.GLTFLoader();
+            coreEngine.textureLoader = new THREE.TextureLoader();
+
+            // Nạp trước Texture cho Lính Ta & Lính Địch
+            coreEngine.textureLoader.load(GAME_ASSETS.blueMinionImg, (tex) => {
+                loadedTextures.blueMinion = tex;
+                printDebug(`Đã nạp thành công Ảnh Lính Ta: ${GAME_ASSETS.blueMinionImg}`);
+            });
+
+            coreEngine.textureLoader.load(GAME_ASSETS.redMinionImg, (tex) => {
+                loadedTextures.redMinion = tex;
+                printDebug(`Đã nạp thành công Ảnh Lính Địch: ${GAME_ASSETS.redMinionImg}`);
+            });
 
             // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
@@ -434,7 +454,7 @@
                 resetPlayerState();
             });
 
-            // 3. TƯỚNG ĐỊCH: Mặc định là KHỐI MÀU ĐỎ. Nếu tìm thấy raz_super_striker_arena_of_valor.glb sẽ chuyển sang Model Raz.
+            // 3. TƯỚNG ĐỊCH
             createDefaultRedCubeEnemy();
             tryLoadGLTFModel(GAME_ASSETS.enemy, 3.5, true, (razModel) => {
                 if (activeEntities.enemyModel) {
@@ -444,12 +464,12 @@
                 activeEntities.enemyGroup.add(razModel);
             });
 
-            // 4. KIỂM TRA MODEL SLIME SẴN CÓ CHO CHIÊU ĐỊCH
+            // 4. MODEL SLIME CHO CHIÊU ĐỊCH
             tryLoadGLTFModel(GAME_ASSETS.enemySkill, 1.8, false, (slimeModel) => {
                 activeEntities.slimeSkillModelTemplate = slimeModel;
             });
 
-            // Timers & Spawners: Địch nhả chiêu sau MỖI 0.5 GIÂY (500ms)
+            // Timers
             setInterval(enemyAttackRoutine, 500);
             setInterval(spawnMinionWave, 16000);
             spawnMinionWave();
@@ -461,9 +481,6 @@
             gameMainLoop();
         }
 
-        /**
-         * TẠO KHỐI MÀU ĐỎ CHO ĐỊCH (MẶC ĐỊNH)
-         */
         function createDefaultRedCubeEnemy() {
             const cubeGeo = new THREE.BoxGeometry(2, 3, 2);
             const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 });
@@ -489,28 +506,48 @@
         }
 
         /**
-         * MINION SPAWN SYSTEM
+         * TẠO LÍNH TA VÀ LÍNH ĐỊCH (HỖ TRỢ ẢNH IMG_0510 & IMG_0519)
          */
         function spawnMinionWave() {
             for (let i = 0; i < 4; i++) {
-                // Lính Ta
-                const minionBlue = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x3498db })
-                );
-                minionBlue.position.set(-9 + i * 6, 0.6, 32);
-                minionBlue.castShadow = true;
+                // --- LÍNH TA (MÀU XANH / IMG_0510.jpeg) ---
+                let minionBlue;
+                if (loadedTextures.blueMinion) {
+                    // Nếu nạp được ảnh IMG_0510.jpeg, tạo Sprite dạng ảnh
+                    const spriteMat = new THREE.SpriteMaterial({ map: loadedTextures.blueMinion });
+                    minionBlue = new THREE.Sprite(spriteMat);
+                    minionBlue.scale.set(2.2, 2.2, 1.0);
+                    minionBlue.position.set(-9 + i * 6, 1.1, 32);
+                } else {
+                    // Mặc định: Hình trụ màu xanh dương
+                    minionBlue = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
+                        new THREE.MeshStandardMaterial({ color: 0x0066ff })
+                    );
+                    minionBlue.position.set(-9 + i * 6, 0.6, 32);
+                    minionBlue.castShadow = true;
+                }
                 minionBlue.userData = { isEnemy: false, hp: 25 };
                 coreEngine.scene.add(minionBlue);
                 activeEntities.minionList.push(minionBlue);
 
-                // Lính Địch
-                const minionRed = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x9b59b6 })
-                );
-                minionRed.position.set(-9 + i * 6, 0.6, -32);
-                minionRed.castShadow = true;
+                // --- LÍNH ĐỊCH (MÀU ĐỎ / IMG_0519.jpeg) ---
+                let minionRed;
+                if (loadedTextures.redMinion) {
+                    // Nếu nạp được ảnh IMG_0519.jpeg, tạo Sprite dạng ảnh
+                    const spriteMat = new THREE.SpriteMaterial({ map: loadedTextures.redMinion });
+                    minionRed = new THREE.Sprite(spriteMat);
+                    minionRed.scale.set(2.2, 2.2, 1.0);
+                    minionRed.position.set(-9 + i * 6, 1.1, -32);
+                } else {
+                    // Mặc định: Hình trụ màu đỏ
+                    minionRed = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.6, 0.6, 1.2, 12),
+                        new THREE.MeshStandardMaterial({ color: 0xff0000 })
+                    );
+                    minionRed.position.set(-9 + i * 6, 0.6, -32);
+                    minionRed.castShadow = true;
+                }
                 minionRed.userData = { isEnemy: true, hp: 25 };
                 coreEngine.scene.add(minionRed);
                 activeEntities.minionList.push(minionRed);
@@ -518,19 +555,15 @@
         }
 
         /**
-         * ĐỊCH BẮN CHIÊU MỖI 0.5 GIÂY:
-         * - Mặc định nhả ra CỤC MÀU CAM (Orange Sphere) gây 10 máu.
-         * - Nếu có minecraft_slime.glb thì nhả ra MODEL SLIME.
+         * ĐỊCH BẮN CHIÊU MỖI 0.5 GIÂY
          */
         function enemyAttackRoutine() {
             if (enemyRuntime.hp <= 0) return;
 
             let skillMesh;
             if (activeEntities.slimeSkillModelTemplate) {
-                // Sử dụng Clone của Model Slime
                 skillMesh = activeEntities.slimeSkillModelTemplate.clone();
             } else {
-                // Tạo Cục Màu Cam mặc định
                 const orangeGeo = new THREE.SphereGeometry(0.8, 16, 16);
                 const orangeMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.2 });
                 skillMesh = new THREE.Mesh(orangeGeo, orangeMat);
@@ -551,12 +584,12 @@
             activeEntities.projectileList.push({
                 mesh: projMesh,
                 direction: flightDir,
-                ttl: 120 // Thời gian tồn tại của viên đạn
+                ttl: 120
             });
         }
 
         /**
-         * PLAYER SKILL - BIJAN LÁI XE RỒNG
+         * PLAYER SKILL
          */
         function executeBijanSkill() {
             if (!playerRuntime.canSkill || playerRuntime.isDrivingDragon) return;
@@ -727,7 +760,7 @@
                 }
             }
 
-            // 4. Xử lý Cục Cam / Slime Bắn ra (Gây 10 máu)
+            // 4. Xử lý Chiêu Bắn ra
             for (let i = activeEntities.projectileList.length - 1; i >= 0; i--) {
                 let p = activeEntities.projectileList[i];
                 p.mesh.position.add(p.direction.clone().multiplyScalar(0.42));
@@ -752,7 +785,7 @@
                 }
             }
 
-            // 5. Lính Giao Tranh
+            // 5. Lính Di Chuyển Giao Tranh
             for (let i = activeEntities.minionList.length - 1; i >= 0; i--) {
                 let m = activeEntities.minionList[i];
                 if (!m) continue;
